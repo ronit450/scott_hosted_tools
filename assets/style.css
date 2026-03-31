@@ -1,0 +1,527 @@
+/* Stone Harp Analytics — Streamlit CSS Override */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Root variables ── */
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-surface: #111827;
+  --bg-card: rgba(17, 24, 39, 0.55);
+  --bg-card-hover: rgba(22, 31, 48, 0.7);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.1);
+  --gold-primary: #c0a87e;
+  --gold-light: #d4c4a0;
+  --gold-dark: #a08a5c;
+  --gold-glow: rgba(192, 168, 126, 0.12);
+  --blue-accent: #4f7cff;
+  --blue-glow: rgba(79, 124, 255, 0.12);
+  --teal-accent: #2dd4bf;
+  --teal-glow: rgba(45, 212, 191, 0.1);
+  --text-primary: #f1f1f4;
+  --text-secondary: #8b8fa3;
+  --text-muted: #5a5e72;
+  --error-red: #ef4444;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, sans-serif;
+}
+
+/* ── Global overrides ── */
+.stApp {
+  background: var(--bg-deep) !important;
+  font-family: var(--font-body) !important;
+}
+
+.stApp::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(79, 124, 255, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(192, 168, 126, 0.04) 0%, transparent 60%);
+}
+
+/* Hide default Streamlit elements */
+#MainMenu, header[data-testid="stHeader"], footer,
+.stDeployButton, div[data-testid="stDecoration"] {
+  display: none !important;
+}
+
+/* ── Typography ── */
+h1 {
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+  letter-spacing: -0.01em !important;
+}
+
+h2, h3 {
+  font-family: var(--font-display) !important;
+  color: var(--text-primary) !important;
+}
+
+p, label, span, div {
+  font-family: var(--font-body) !important;
+}
+
+/* ── Login form inputs ── */
+.stTextInput > div > div > input {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+  padding: 0.8rem 1rem 0.8rem 1rem !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.9375rem !important;
+  transition: all 0.25s ease !important;
+}
+
+.stTextInput > div > div > input:focus {
+  border-color: var(--gold-primary) !important;
+  box-shadow: 0 0 0 3px var(--gold-glow) !important;
+  background: rgba(192, 168, 126, 0.03) !important;
+}
+
+.stTextInput > div > div > input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.stTextInput label {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* ── Primary buttons (Sign In, Open Tool) ── */
+.stButton > button[kind="primary"],
+button[data-testid="stBaseButton-primary"] {
+  background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark)) !important;
+  color: var(--bg-deep) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.3s ease !important;
+  width: 100%;
+}
+
+.stButton > button[kind="primary"]:hover,
+button[data-testid="stBaseButton-primary"]:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 20px rgba(192, 168, 126, 0.3) !important;
+}
+
+/* ── Secondary buttons ── */
+.stButton > button[kind="secondary"],
+button[data-testid="stBaseButton-secondary"] {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+  color: var(--text-secondary) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  transition: all 0.25s ease !important;
+}
+
+.stButton > button[kind="secondary"]:hover,
+button[data-testid="stBaseButton-secondary"]:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--border-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Logout button (use class .logout-btn with st.markdown) ── */
+.logout-btn button {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  border-radius: 10px !important;
+  color: #fca5a5 !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1rem !important;
+}
+
+.logout-btn button:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: #fecaca !important;
+}
+
+/* ── Tool cards (use with st.container + custom class) ── */
+div[data-testid="stVerticalBlock"] > div[data-testid="stColumn"] > div {
+  position: relative;
+}
+
+/* Card-like containers */
+.tool-card-wrapper {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 2rem 1.75rem 1.75rem;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.tool-card-wrapper:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Login card container ── */
+.login-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 2.25rem 2rem 2rem;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* ── Top bar ── */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 2rem;
+  background: rgba(10, 14, 26, 0.75);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* ── User badge ── */
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.875rem 0.375rem 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 100px;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--bg-deep);
+}
+
+/* ── Gold accent text ── */
+.gold-text {
+  color: var(--gold-primary) !important;
+}
+
+/* ── Error messages ── */
+.stAlert[data-baseweb="notification"] {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border-radius: 10px !important;
+  color: #fca5a5 !important;
+}
+
+/* ── Sidebar override (for tracker/hermes pages) ── */
+section[data-testid="stSidebar"] {
+  background: var(--bg-surface) !important;
+  border-right: 1px solid var(--border-subtle) !important;
+}
+
+/* Force sidebar always open (non-collapsible) */
+section[data-testid="stSidebar"] {
+  width: 280px !important;
+  min-width: 280px !important;
+  transform: none !important;
+}
+
+/* Hide the collapse/expand button */
+button[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"] {
+  display: none !important;
+}
+
+/* Hide the navigation section collapse/expand toggle ("keyboard_double_arrow_down" text leak) */
+section[data-testid="stSidebar"] [data-testid="stSidebarNavSectionHeader"] span[data-testid="stIconMaterial"],
+section[data-testid="stSidebar"] [data-testid="stSidebarNavOverflowButton"],
+section[data-testid="stSidebar"] [data-testid="stSidebarNavSeparator"] {
+  display: none !important;
+}
+
+/* Broad fallback: hide any bare Material icon text that leaks in sidebar nav area */
+section[data-testid="stSidebar"] nav span.material-symbols-outlined,
+section[data-testid="stSidebar"] nav span.material-symbols-rounded {
+  display: none !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: var(--text-secondary) !important;
+  text-align: left !important;
+  width: 100% !important;
+  transition: all 0.2s ease !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Selectbox, multiselect ── */
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+}
+
+/* ── Metric Cards (tracker-style) ── */
+[data-testid="stMetric"] {
+  background: linear-gradient(135deg, #1e293b 0%, #172033 100%);
+  border: 1px solid #253348;
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.02);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-testid="stMetric"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(96,165,250,0.08);
+}
+
+[data-testid="stMetric"] label {
+  color: #7c8fa6 !important;
+  font-size: 0.78rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 500 !important;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+  font-family: var(--font-display) !important;
+  color: #f1f5f9 !important;
+  font-weight: 700 !important;
+  font-size: 1.4rem !important;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricDelta"] > div {
+  font-weight: 500;
+}
+
+/* Sidebar metrics (smaller) */
+section[data-testid="stSidebar"] [data-testid="stMetric"] {
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+section[data-testid="stSidebar"] [data-testid="stMetric"] [data-testid="stMetricValue"] {
+  font-size: 1.1rem !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stMetric"] label {
+  font-size: 0.7rem !important;
+}
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] {
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+  color: var(--text-secondary) !important;
+  font-family: var(--font-body) !important;
+}
+
+.stTabs [aria-selected="true"] {
+  color: var(--gold-primary) !important;
+  border-bottom-color: var(--gold-primary) !important;
+}
+
+/* ── Expander ── */
+.streamlit-expanderHeader {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Dataframes / tables ── */
+.stDataFrame {
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* ── Containers with border (st.container(border=True)) ── */
+[data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius: 14px !important;
+  border-color: #253348 !important;
+  background: linear-gradient(135deg, #141e2e, #0f1724) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ── Form borders ── */
+[data-testid="stForm"] {
+  border: 1px solid #253348 !important;
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, #141e2e, #0f1724) !important;
+  padding: 20px !important;
+}
+
+/* ── Form inputs (tracker pages) ── */
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input,
+[data-testid="stTextArea"] textarea {
+  background-color: #141e2e !important;
+  border: 1px solid #253348 !important;
+  border-radius: 10px !important;
+  color: #e2e8f0 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-testid="stTextInput"] input:focus,
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Input labels */
+[data-testid="stTextInput"] label,
+[data-testid="stNumberInput"] label,
+[data-testid="stTextArea"] label,
+[data-testid="stSelectbox"] label,
+[data-testid="stDateInput"] label,
+[data-testid="stMultiSelect"] label {
+  color: #8b9ab5 !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ── Date input ── */
+[data-testid="stDateInput"] > div > div {
+  background-color: #141e2e !important;
+  border: 1px solid #253348 !important;
+  border-radius: 10px !important;
+}
+
+/* ── Dividers ── */
+hr {
+  border-color: #1e2d3d !important;
+  margin: 1.8rem 0 !important;
+  opacity: 0.6;
+}
+
+/* ── Info/Warning/Success boxes ── */
+[data-testid="stAlert"] {
+  border-radius: 12px;
+  border: none;
+  font-size: 0.9rem;
+}
+
+/* ── Download button ── */
+[data-testid="stDownloadButton"] button {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+  transition: all 0.2s ease;
+}
+
+[data-testid="stDownloadButton"] button:hover {
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+  transform: translateY(-1px);
+}
+
+/* ── Plotly charts ── */
+.js-plotly-plot .plotly .main-svg {
+  border-radius: 12px;
+}
+
+/* ── Expander (tracker) ── */
+[data-testid="stExpander"] {
+  background: linear-gradient(135deg, #141e2e, #172033);
+  border: 1px solid #253348;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+[data-testid="stExpander"] summary {
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+/* ── Multiselect tags ── */
+[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+  background-color: #2563eb !important;
+  border-radius: 8px;
+}
+
+/* ── Number input step buttons ── */
+[data-testid="stNumberInput"] button {
+  background-color: #1e293b !important;
+  border-color: #253348 !important;
+  color: #94a3b8 !important;
+  border-radius: 8px !important;
+}
+
+/* ── Dialog / Modal ── */
+[data-testid="stModal"] > div {
+  border-radius: 16px;
+  border: 1px solid #253348;
+}
+
+/* ── Toast ── */
+[data-testid="stToast"] {
+  border-radius: 12px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

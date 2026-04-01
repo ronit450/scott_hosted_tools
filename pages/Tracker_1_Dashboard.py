@@ -12,7 +12,6 @@ from db.database import query, execute
 from utils.helpers import sidebar_quick_stats
 
 require_login(tool="tracker")
-st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
 sidebar_quick_stats()
 
 css_path = Path(__file__).parent.parent / "assets" / "style.css"

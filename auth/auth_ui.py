@@ -24,12 +24,69 @@ def _get_cookie_controller():
     return st.session_state["_cookie_ctrl"]
 
 
+def _show_loading_screen():
+    """Full-screen loader shown while waiting for cookies on first render cycle."""
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] { display: none !important; }
+    .stApp > header { display: none !important; }
+    .loader-wrap {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        background: #0a0e1a;
+        gap: 1.5rem;
+    }
+    .loader-logo {
+        width: 64px; height: 64px; border-radius: 16px;
+        background: linear-gradient(135deg, rgba(192,168,126,0.15), rgba(192,168,126,0.05));
+        border: 1px solid rgba(192,168,126,0.2);
+        display: flex; align-items: center; justify-content: center;
+        animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 0.5; transform: scale(0.97); }
+        50%       { opacity: 1;   transform: scale(1.03); box-shadow: 0 0 30px rgba(192,168,126,0.15); }
+    }
+    .loader-ring {
+        width: 36px; height: 36px;
+        border: 2px solid rgba(192,168,126,0.15);
+        border-top-color: #c0a87e;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text {
+        font-size: 0.8125rem; color: #5a5e72;
+        font-family: -apple-system, sans-serif; letter-spacing: 0.04em;
+    }
+    </style>
+    <div class="loader-wrap">
+        <div class="loader-logo">
+            <svg viewBox="0 0 40 44" width="32" height="32" fill="#c0a87e" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 0C18 0 16.5 1.5 16.5 3.5V6C12.5 7.5 9 10 7 13.5C4.5 17.5 4 22 5.5 26C7 30 10.5 33 14.5 34.5V38H12V40H28V38H25.5V34.5C29.5 33 33 30 34.5 26C36 22 35.5 17.5 33 13.5C31 10 27.5 7.5 23.5 6V3.5C23.5 1.5 22 0 20 0Z"/>
+            </svg>
+        </div>
+        <div class="loader-ring"></div>
+        <div class="loader-text">Stone Harp Analytics</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def _try_cookie_login():
     """
     Check for a remember-me cookie and auto-login if valid.
-    Returns True if auto-login succeeded.
+    On the very first render cycle cookies aren't available yet — returns None (pending).
+    Returns True if auto-login succeeded, False if no valid cookie, None if not ready yet.
     """
     ctrl = _get_cookie_controller()
+
+    # First render: CookieController hasn't received cookies from browser yet.
+    # Mark that we've started checking so next cycle we know it's a real result.
+    if "_cookies_ready" not in st.session_state:
+        st.session_state["_cookies_ready"] = False
+        return None  # not ready — show loader instead of login form
+
     raw_token = ctrl.get(COOKIE_NAME)
     if not raw_token:
         return False
@@ -87,9 +144,16 @@ def require_login(tool: str = "app"):
 
     # Not logged in — try cookie first, then show form
     if "auth_user" not in st.session_state:
-        if _try_cookie_login():
+        result = _try_cookie_login()
+        if result is None:
+            # First render cycle — cookies not ready yet, show loader
+            st.session_state["_cookies_ready"] = True
+            _show_loading_screen()
             st.rerun()
-        _show_login_form()
+        elif result is True:
+            st.rerun()
+        else:
+            _show_login_form()
         st.stop()
 
     user = st.session_state["auth_user"]

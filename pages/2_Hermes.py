@@ -18,11 +18,6 @@ from hermes_core.converter import convert_to_geojson
 from hermes_core.exporters import export_kml, export_shp
 
 require_login(tool="hermes")
-st.set_page_config(
-    page_title="Hermes — Stone Harp Analytics",
-    page_icon="🌍",
-    layout="wide",
-)
 
 user = st.session_state.get("auth_user", {})
 sidebar_user_info()

@@ -16,8 +16,9 @@ import time
 from auth.auth_db import (
     init_auth_db, verify_password, get_user, log_login, log_logout, log_activity,
     check_rate_limit, record_failed_attempt, clear_attempts,
+    create_remember_token, validate_remember_token,
 )
-from auth.auth_ui import sidebar_user_info, logout, SESSION_TIMEOUT_SECONDS
+from auth.auth_ui import sidebar_user_info, logout, SESSION_TIMEOUT_SECONDS, COOKIE_NAME, _get_cookie_controller
 from auth.backup import auto_backup_if_due, cleanup_old_backups
 from db.database import init_db
 from db.seed_data import seed_all
@@ -34,11 +35,104 @@ ASSETS = os.path.join(os.path.dirname(__file__), "assets")
 
 
 def _load_css():
-    """Load the shared style.css."""
+    """Load the shared style.css + page-transition loader script."""
     css_path = os.path.join(ASSETS, "style.css")
     if os.path.exists(css_path):
         css = Path(css_path).read_text()
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+    # Page transition loader — uses st.components.v1.html for JS execution
+    import streamlit.components.v1 as components
+    components.html("""
+    <style>
+    #sha-page-loader {
+        position: fixed; top: 0; left: 0; right: 0; height: 3px;
+        z-index: 99999; pointer-events: none; opacity: 0;
+        background: linear-gradient(90deg, transparent, #c0a87e 20%, #d4c4a0 50%, #c0a87e 80%, transparent);
+        background-size: 200% 100%;
+        transition: opacity 0.15s ease;
+    }
+    #sha-page-loader.active {
+        opacity: 1;
+        animation: sha-shimmer 1s ease-in-out infinite;
+    }
+    @keyframes sha-shimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    #sha-page-overlay {
+        position: fixed; inset: 0; z-index: 99998;
+        background: rgba(6, 10, 20, 0.4);
+        pointer-events: none; opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    #sha-page-overlay.active { opacity: 1; }
+    </style>
+    <script>
+    // Inject loader elements into the PARENT document (Streamlit's main frame)
+    const parentDoc = window.parent.document;
+
+    // Only inject once
+    if (!parentDoc.getElementById('sha-page-loader')) {
+        const loader = parentDoc.createElement('div');
+        loader.id = 'sha-page-loader';
+        loader.style.cssText = 'position:fixed;top:0;left:0;right:0;height:3px;z-index:99999;pointer-events:none;opacity:0;background:linear-gradient(90deg,transparent,#c0a87e 20%,#d4c4a0 50%,#c0a87e 80%,transparent);background-size:200% 100%;transition:opacity 0.15s ease;';
+        parentDoc.body.appendChild(loader);
+
+        const overlay = parentDoc.createElement('div');
+        overlay.id = 'sha-page-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(6,10,20,0.4);pointer-events:none;opacity:0;transition:opacity 0.2s ease;';
+        parentDoc.body.appendChild(overlay);
+
+        // Add shimmer animation
+        const style = parentDoc.createElement('style');
+        style.textContent = '@keyframes sha-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}';
+        parentDoc.head.appendChild(style);
+
+        function showLoader() {
+            loader.style.opacity = '1';
+            loader.style.animation = 'sha-shimmer 1s ease-in-out infinite';
+            overlay.style.opacity = '1';
+        }
+        function hideLoader() {
+            loader.style.opacity = '0';
+            loader.style.animation = 'none';
+            overlay.style.opacity = '0';
+        }
+
+        // Intercept sidebar nav clicks
+        parentDoc.addEventListener('click', function(e) {
+            const link = e.target.closest('a[data-testid="stSidebarNavLink"], nav a');
+            if (link) showLoader();
+        }, true);
+
+        // Intercept navigation buttons (Open Tracker, Back to Home, Sign In/Out)
+        parentDoc.addEventListener('click', function(e) {
+            const btn = e.target.closest('button');
+            if (btn) {
+                const text = (btn.textContent || '').toLowerCase();
+                if (text.includes('open') || text.includes('back') || text.includes('sign')) {
+                    showLoader();
+                }
+            }
+        }, true);
+
+        // Hide loader when Streamlit finishes re-rendering
+        const app = parentDoc.querySelector('[data-testid="stAppViewBlockContainer"]');
+        if (app) {
+            new MutationObserver(function() { hideLoader(); })
+                .observe(app, { childList: true, subtree: true });
+        }
+
+        // Fallback: auto-hide after 4s
+        setInterval(function() {
+            if (parseFloat(loader.style.opacity) > 0) {
+                setTimeout(hideLoader, 4000);
+            }
+        }, 5000);
+    }
+    </script>
+    """, height=0)
 
 
 # SVG constants used across pages
@@ -57,11 +151,228 @@ ARROW_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 #  Page functions
 # ═══════════════════════════════════════════════════════════════
 
+def _get_logo_b64():
+    """Return the Stone Harp logo as a base64 data URI (cached)."""
+    if "_logo_b64" not in st.session_state:
+        logo_path = os.path.join(ASSETS, "stoneharp_logo.png")
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as f:
+                st.session_state["_logo_b64"] = base64.b64encode(f.read()).decode()
+        else:
+            st.session_state["_logo_b64"] = ""
+    return st.session_state["_logo_b64"]
+
+
+def _show_splash():
+    """Premium full-screen splash screen shown while cookies initialise."""
+    logo_b64 = _get_logo_b64()
+    logo_img = f'<img src="data:image/png;base64,{logo_b64}" style="width:90px;height:auto;filter:drop-shadow(0 0 30px rgba(181,113,74,0.3));">' if logo_b64 else ""
+
+    # ── CSS (plain string — no f-string needed) ──
+    splash_css = """
+    <style>
+    [data-testid="stSidebar"] { display: none !important; }
+    .stApp > header { display: none !important; }
+    [data-testid="stAppViewBlockContainer"] { animation: none !important; padding: 0 !important; }
+
+    .splash-wrap {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        background: #060a14;
+    }
+    .splash-bg {
+        position: fixed; inset: 0; z-index: 0;
+        background:
+            radial-gradient(ellipse 100% 80% at 50% 50%, rgba(181,113,74,0.06) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 40% at 20% 80%, rgba(79,124,255,0.03) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 40% at 80% 20%, rgba(192,168,126,0.04) 0%, transparent 50%),
+            #060a14;
+    }
+    .splash-grid {
+        position: fixed; inset: 0; z-index: 0;
+        background-image:
+            linear-gradient(rgba(192,168,126,0.018) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(192,168,126,0.018) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 10%, transparent 65%);
+        animation: gridPulse 8s ease-in-out infinite;
+    }
+    @keyframes gridPulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+    .splash-content {
+        position: relative; z-index: 5;
+        text-align: center;
+        display: flex; flex-direction: column;
+        align-items: center;
+    }
+
+    .splash-logo-wrap { position: relative; margin-bottom: 2.5rem; }
+    .splash-ring {
+        position: absolute; top: 50%; left: 50%;
+        width: 180px; height: 180px;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 1px solid rgba(192,168,126,0.1);
+        animation: ringExpand 2s cubic-bezier(0.16,1,0.3,1) 0.3s both;
+    }
+    .splash-ring::after {
+        content: ''; position: absolute; inset: -20px;
+        border-radius: 50%;
+        border: 1px solid rgba(192,168,126,0.04);
+        animation: ringPulse 4s ease-in-out 2s infinite;
+    }
+    @keyframes ringExpand { from { opacity:0; width:120px; height:120px; } to { opacity:1; width:180px; height:180px; } }
+    @keyframes ringPulse { 0%,100% { transform:scale(1); opacity:0.4; } 50% { transform:scale(1.15); opacity:0.8; } }
+
+    .splash-glow {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 160px; height: 160px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(181,113,74,0.2) 0%, rgba(192,168,126,0.05) 50%, transparent 70%);
+        filter: blur(40px);
+        animation: glowIn 2s ease 0.5s both, glowPulse 5s ease-in-out 2s infinite;
+    }
+    @keyframes glowIn { from { opacity:0; transform:translate(-50%,-50%) scale(0.5); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+    @keyframes glowPulse { 0%,100% { opacity:0.7; transform:translate(-50%,-50%) scale(1); } 50% { opacity:1; transform:translate(-50%,-50%) scale(1.1); } }
+
+    .splash-logo-icon {
+        position: relative;
+        opacity: 0;
+        animation: logoReveal 1.4s cubic-bezier(0.16,1,0.3,1) 0.6s forwards;
+    }
+    @keyframes logoReveal {
+        0%   { opacity:0; transform:scale(0.7) translateY(10px); }
+        60%  { opacity:1; transform:scale(1.03); }
+        100% { opacity:1; transform:scale(1) translateY(0); }
+    }
+
+    .splash-name { font-family: 'Playfair Display', Georgia, serif; font-size: 2.75rem; font-weight: 700; line-height: 1.1; margin-bottom: 0.75rem; overflow: hidden; }
+    .splash-name-line { display: block; opacity: 0; transform: translateY(100%); }
+    .splash-name-1 { color: #f1f1f4; animation: textUp 0.9s cubic-bezier(0.16,1,0.3,1) 1.1s forwards; }
+    .splash-name-2 { color: #c0a87e; animation: textUp 0.9s cubic-bezier(0.16,1,0.3,1) 1.3s forwards; }
+    @keyframes textUp { from { opacity:0; transform:translateY(100%); } to { opacity:1; transform:translateY(0); } }
+
+    .splash-divider {
+        display: flex; align-items: center; gap: 1rem;
+        margin: 1.25rem 0 1.5rem; opacity: 0;
+        animation: splashFadeIn 0.8s ease 1.6s forwards;
+    }
+    .splash-divider-line { width: 60px; height: 1px; background: linear-gradient(90deg, transparent, rgba(192,168,126,0.3), transparent); }
+    .splash-divider-diamond { width: 6px; height: 6px; background: #c0a87e; transform: rotate(45deg); opacity: 0.6; }
+    @keyframes splashFadeIn { from { opacity:0; } to { opacity:1; } }
+
+    .splash-tagline {
+        font-size: 0.875rem; color: #8b8fa3; font-weight: 400;
+        letter-spacing: 0.15em; text-transform: uppercase;
+        opacity: 0; animation: splashFadeIn 1s ease 1.8s forwards;
+        font-family: 'DM Sans', -apple-system, sans-serif;
+    }
+
+    .splash-loader {
+        margin-top: 3.5rem; display: flex; flex-direction: column;
+        align-items: center; gap: 1rem;
+        opacity: 0; animation: splashFadeIn 0.8s ease 2s forwards;
+    }
+    .splash-bar { width: 180px; height: 2px; background: rgba(255,255,255,0.04); border-radius: 2px; overflow: hidden; position: relative; }
+    .splash-fill {
+        position: absolute; top: 0; left: 0; height: 100%; width: 0%;
+        background: linear-gradient(90deg, #a08a5c, #c0a87e, #d4c4a0);
+        border-radius: 2px;
+        animation: loadBar 2s cubic-bezier(0.4,0,0.2,1) 2.2s forwards;
+    }
+    @keyframes loadBar { 0% { width:0%; } 30% { width:40%; } 70% { width:75%; } 100% { width:100%; } }
+    .splash-loader-text {
+        font-size: 0.6875rem; color: #4a4e62;
+        letter-spacing: 0.12em; text-transform: uppercase;
+        font-family: 'DM Sans', -apple-system, sans-serif;
+    }
+
+    .splash-particle {
+        position: fixed; width: 2px; height: 2px; border-radius: 50%;
+        background: #c0a87e; opacity: 0; z-index: 1;
+    }
+    .sp1 { top: 18%; left: 25%; animation: pFloat 6s ease-in-out 2s infinite; }
+    .sp2 { top: 72%; left: 70%; animation: pFloat 7s ease-in-out 2.4s infinite; }
+    .sp3 { top: 35%; right: 18%; animation: pFloat 5s ease-in-out 2.8s infinite; }
+    .sp4 { bottom: 25%; left: 15%; animation: pFloat 8s ease-in-out 3s infinite; }
+    .sp5 { top: 50%; right: 30%; animation: pFloat 6.5s ease-in-out 3.2s infinite; width: 3px; height: 3px; }
+    @keyframes pFloat {
+        0%   { opacity:0; transform:translateY(0) scale(1); }
+        20%  { opacity:0.6; }
+        50%  { opacity:0.3; transform:translateY(-20px) scale(1.5); }
+        80%  { opacity:0.5; }
+        100% { opacity:0; transform:translateY(-40px) scale(0.5); }
+    }
+
+    .splash-corner {
+        position: fixed; z-index: 1; width: 80px; height: 80px;
+        border: 1px solid rgba(192,168,126,0.07);
+        opacity: 0; animation: cornerIn 1.2s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .sc-tl { top: 2rem; left: 2rem; border-right:none; border-bottom:none; animation-delay: 1.8s; }
+    .sc-tr { top: 2rem; right: 2rem; border-left:none; border-bottom:none; animation-delay: 2s; }
+    .sc-bl { bottom: 2rem; left: 2rem; border-right:none; border-top:none; animation-delay: 2.2s; }
+    .sc-br { bottom: 2rem; right: 2rem; border-left:none; border-top:none; animation-delay: 2.4s; }
+    @keyframes cornerIn { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
+
+    .splash-copyright {
+        position: fixed; bottom: 1.5rem; left: 0; right: 0; text-align: center;
+        font-size: 0.625rem; color: #4a4e62; letter-spacing: 0.1em;
+        text-transform: uppercase; opacity: 0; animation: splashFadeIn 0.6s ease 2.5s forwards;
+        z-index: 5; font-family: 'DM Sans', -apple-system, sans-serif;
+    }
+    </style>
+    """
+
+    # ── HTML body (separate string, logo injected via concatenation) ──
+    splash_html = (
+        '<div class="splash-bg"></div>'
+        '<div class="splash-grid"></div>'
+        '<div class="splash-particle sp1"></div>'
+        '<div class="splash-particle sp2"></div>'
+        '<div class="splash-particle sp3"></div>'
+        '<div class="splash-particle sp4"></div>'
+        '<div class="splash-particle sp5"></div>'
+        '<div class="splash-corner sc-tl"></div>'
+        '<div class="splash-corner sc-tr"></div>'
+        '<div class="splash-corner sc-bl"></div>'
+        '<div class="splash-corner sc-br"></div>'
+        '<div class="splash-wrap">'
+        '  <div class="splash-content">'
+        '    <div class="splash-logo-wrap">'
+        '      <div class="splash-ring"></div>'
+        '      <div class="splash-glow"></div>'
+        '      <div class="splash-logo-icon">' + logo_img + '</div>'
+        '    </div>'
+        '    <h1 class="splash-name">'
+        '      <span class="splash-name-line splash-name-1">Stone Harp</span>'
+        '      <span class="splash-name-line splash-name-2">Analytics</span>'
+        '    </h1>'
+        '    <div class="splash-divider">'
+        '      <div class="splash-divider-line"></div>'
+        '      <div class="splash-divider-diamond"></div>'
+        '      <div class="splash-divider-line"></div>'
+        '    </div>'
+        '    <p class="splash-tagline">Intelligence &middot; Precision &middot; Clarity</p>'
+        '    <div class="splash-loader">'
+        '      <div class="splash-bar"><div class="splash-fill"></div></div>'
+        '      <div class="splash-loader-text">Initializing</div>'
+        '    </div>'
+        '  </div>'
+        '</div>'
+        '<div class="splash-copyright">&copy; 2026 Stone Harp Analytics</div>'
+    )
+
+    st.markdown(splash_css, unsafe_allow_html=True)
+    st.markdown(splash_html, unsafe_allow_html=True)
+
+
 def _login_page():
     """Login — centered card with ambient background."""
-    st.set_page_config(page_title="Sign In — Stone Harp Analytics", page_icon="🔐", layout="centered")
     _load_css()
 
+    # ── Login form ──
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display: none !important; }
@@ -126,6 +437,7 @@ def _login_page():
     with st.form("login_form", clear_on_submit=False):
         username = st.text_input("Username", placeholder="Enter your username")
         password = st.text_input("Password", type="password", placeholder="Enter your password")
+        remember_me = st.checkbox("Remember me for 30 days", value=True)
         submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
 
     if submitted:
@@ -148,6 +460,17 @@ def _login_page():
             sid = log_login(username)
             st.session_state["auth_session_id"] = sid
             log_activity(username, "app", "login", "Signed in")
+
+            # Remember Me — set cookie
+            if remember_me:
+                try:
+                    raw_token = create_remember_token(username)
+                    ctrl = _get_cookie_controller()
+                    ctrl.set(COOKIE_NAME, raw_token, max_age=30 * 24 * 3600)
+                    st.session_state["_remember_token"] = raw_token
+                except Exception:
+                    pass  # cookie set failed, login still works
+
             st.rerun()
         else:
             record_failed_attempt(username.lower())
@@ -162,7 +485,6 @@ def _login_page():
 
 def _landing_page():
     """Tool picker — matches the HTML landing design."""
-    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide", initial_sidebar_state="collapsed")
     _load_css()
 
     user = st.session_state["auth_user"]
@@ -380,7 +702,25 @@ def _back_to_home():
 #  Navigation router
 # ═══════════════════════════════════════════════════════════════
 
-# ── Session timeout check ──
+# ── 1. Splash screen (every new session, before anything else) ──
+if "_splash_done" not in st.session_state:
+    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="centered")
+    _show_splash()
+    st.session_state["_splash_done"] = True
+    time.sleep(3)
+    st.rerun()
+
+# ── Page config (must be first Streamlit command after splash) ──
+logged_in_now = "auth_user" in st.session_state
+active_tool_now = st.session_state.get("active_tool")
+if not logged_in_now:
+    st.set_page_config(page_title="Sign In — Stone Harp Analytics", page_icon="🔐", layout="centered")
+elif active_tool_now:
+    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide")
+else:
+    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide", initial_sidebar_state="collapsed")
+
+# ── 2. Session timeout check ──
 if "auth_user" in st.session_state:
     last_active = st.session_state.get("_last_active")
     if last_active and (time.time() - last_active > SESSION_TIMEOUT_SECONDS):
@@ -395,6 +735,27 @@ if "auth_user" in st.session_state:
     # Refresh activity timestamp
     st.session_state["_last_active"] = time.time()
 
+# ── 3. Cookie auto-login (Remember Me) ──
+if "auth_user" not in st.session_state:
+    try:
+        ctrl = _get_cookie_controller()
+        raw_token = ctrl.get(COOKIE_NAME)
+        if raw_token:
+            username = validate_remember_token(raw_token)
+            if username:
+                u = get_user(username)
+                if u and u["is_active"]:
+                    st.session_state["auth_user"] = u
+                    st.session_state["_last_active"] = time.time()
+                    st.session_state["_remember_token"] = raw_token
+                    sid = log_login(username, "cookie-autologin")
+                    st.session_state["auth_session_id"] = sid
+                    log_activity(username, "app", "login", "Auto-login via Remember Me")
+                    st.rerun()
+    except Exception:
+        pass
+
+# ── 4. Route to the correct page ──
 logged_in = "auth_user" in st.session_state
 active_tool = st.session_state.get("active_tool")
 user = st.session_state.get("auth_user", {})

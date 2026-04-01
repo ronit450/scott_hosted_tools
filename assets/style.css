@@ -34,12 +34,30 @@
 
 /* ── Page transition fade-in ── */
 [data-testid="stAppViewBlockContainer"] {
-  animation: pageIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes pageIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* Sidebar navigation links also animate */
+section[data-testid="stSidebar"] nav a {
+  transition: all 0.25s ease;
+}
+
+/* Page transition overlay (triggered via JS) */
+.page-transition-overlay {
+  position: fixed; inset: 0; z-index: 9998;
+  background: #0a0e1a;
+  pointer-events: none;
+  opacity: 0;
+  animation: transitionFlash 0.6s ease both;
+}
+@keyframes transitionFlash {
+  0%   { opacity: 0.8; }
+  100% { opacity: 0; }
 }
 
 .stApp::before {
@@ -282,10 +300,31 @@ section[data-testid="stSidebar"] [data-testid="stSidebarNavSeparator"] {
   display: none !important;
 }
 
-/* Broad fallback: hide any bare Material icon text that leaks in sidebar nav area */
+/* Broad fallback: hide any bare Material icon text that leaks EVERYWHERE */
+span.material-symbols-outlined,
+span.material-symbols-rounded,
+span[data-testid="stIconMaterial"] {
+  font-size: 0 !important;
+  width: 1em !important;
+  overflow: hidden !important;
+}
+
+/* Restore icon size inside elements that properly render them */
+.stApp span.material-symbols-outlined,
+.stApp span.material-symbols-rounded {
+  font-size: 1.25rem !important;
+  width: auto !important;
+}
+
+/* But hide them specifically in expander headers and sidebar nav where they leak as text */
+[data-testid="stExpander"] summary span.material-symbols-outlined,
+[data-testid="stExpander"] summary span.material-symbols-rounded,
 section[data-testid="stSidebar"] nav span.material-symbols-outlined,
 section[data-testid="stSidebar"] nav span.material-symbols-rounded {
-  display: none !important;
+  font-size: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  display: inline-block !important;
 }
 
 section[data-testid="stSidebar"] .stButton > button {
@@ -534,4 +573,46 @@ hr {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Page loading overlay (visible while Streamlit reruns) ── */
+/* Streamlit marks the app as "running" during reruns —
+   we overlay a subtle loading indicator so navigation feels intentional. */
+.stApp[data-test-script-state="running"] [data-testid="stAppViewBlockContainer"]::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 9990;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    #c0a87e 20%,
+    #d4c4a0 50%,
+    #c0a87e 80%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmerBar 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmerBar {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Dim content slightly while rerunning */
+.stApp[data-test-script-state="running"] [data-testid="stAppViewBlockContainer"] {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+/* Streamlit's built-in status widget — style it to match theme */
+[data-testid="stStatusWidget"] {
+  background: rgba(17, 24, 39, 0.9) !important;
+  border: 1px solid rgba(192, 168, 126, 0.15) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+[data-testid="stStatusWidget"] button {
+  color: #c0a87e !important;
 }

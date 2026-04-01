@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from auth.auth_ui import require_login, sidebar_user_info
 from auth.auth_db import (
     get_all_users, create_user, update_user, delete_user,
-    get_sessions, get_activity, log_activity
+    get_sessions, get_activity, log_activity, verify_password,
 )
 from auth.backup import (
     create_backup, list_backups, restore_tracker_from_backup,
@@ -21,7 +21,6 @@ from auth.backup import (
 )
 
 require_login(tool="admin")
-st.set_page_config(page_title="Admin — Stone Harp Analytics", page_icon="⚙️", layout="wide")
 
 # Load shared CSS
 css_path = Path(__file__).parent.parent / "assets" / "style.css"
@@ -148,11 +147,12 @@ with hdr2:
 st.markdown("")
 
 # ── Tabs ───────────────────────────────────────────────────────
-tab_users, tab_sessions, tab_activity, tab_backups = st.tabs([
+tab_users, tab_sessions, tab_activity, tab_backups, tab_password = st.tabs([
     f"👤 Users  ({len(all_users)})",
     f"🕐 Login History  ({len(all_sessions)})",
     f"⚡ Activity Log  ({len(all_activity)})",
     "💾 Backup & Restore",
+    "🔑 Change Password",
 ])
 
 
@@ -551,3 +551,36 @@ with tab_backups:
             if cr2.button("Cancel", key="bk_confirm_no"):
                 st.session_state.pop("confirm_restore", None)
                 st.rerun()
+
+
+# ════════════════════════════════════════
+# CHANGE PASSWORD TAB
+# ════════════════════════════════════════
+with tab_password:
+    st.markdown(
+        '<p style="font-size:0.8125rem;color:#8b8fa3;margin-bottom:1.5rem;">'
+        'Change your own account password. You must enter your current password for verification.</p>',
+        unsafe_allow_html=True,
+    )
+
+    _, pw_col, _ = st.columns([1, 2, 1])
+    with pw_col:
+        with st.form("change_password_form", clear_on_submit=True):
+            current_pw = st.text_input("Current Password", type="password", placeholder="Enter current password")
+            new_pw = st.text_input("New Password", type="password", placeholder="Enter new password")
+            confirm_pw = st.text_input("Confirm New Password", type="password", placeholder="Re-enter new password")
+            pw_submitted = st.form_submit_button("Update Password", use_container_width=True, type="primary")
+
+        if pw_submitted:
+            if not current_pw or not new_pw or not confirm_pw:
+                st.error("Please fill in all fields.")
+            elif new_pw != confirm_pw:
+                st.error("New passwords do not match.")
+            elif len(new_pw) < 6:
+                st.error("New password must be at least 6 characters.")
+            elif not verify_password(user["username"], current_pw):
+                st.error("Current password is incorrect.")
+            else:
+                update_user(user["username"], password=new_pw)
+                log_activity(user["username"], "admin", "change_password", "Changed own password")
+                st.success("Password updated successfully!", icon="✅")

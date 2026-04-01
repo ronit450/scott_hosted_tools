@@ -55,6 +55,14 @@ def init_auth_db():
             detail      TEXT,
             logged_at   TEXT NOT NULL DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS remember_tokens (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            username    TEXT NOT NULL,
+            token_hash  TEXT NOT NULL UNIQUE,
+            expires_at  TEXT NOT NULL,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
     """)
     conn.commit()
 
@@ -232,6 +240,59 @@ def log_activity(username: str, tool: str, action: str, detail: str = None):
         "INSERT INTO activity_log (username, tool, action, detail) VALUES (?, ?, ?, ?)",
         (username, tool, action, detail)
     )
+    conn.commit()
+    conn.close()
+
+
+# ── Remember Me tokens ────────────────────────────────────────
+
+import secrets as _secrets
+from datetime import timedelta as _timedelta
+
+REMEMBER_ME_DAYS = 30
+
+
+def create_remember_token(username: str) -> str:
+    """Generate a secure token, store its hash in DB, return the raw token for the cookie."""
+    raw_token = _secrets.token_hex(32)  # 64-char hex string
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = (datetime.now() + _timedelta(days=REMEMBER_ME_DAYS)).isoformat()
+
+    conn = _connect()
+    # One active token per user — revoke old ones first
+    conn.execute("DELETE FROM remember_tokens WHERE username = ?", (username,))
+    conn.execute(
+        "INSERT INTO remember_tokens (username, token_hash, expires_at) VALUES (?, ?, ?)",
+        (username, token_hash, expires_at),
+    )
+    conn.commit()
+    conn.close()
+    return raw_token
+
+
+def validate_remember_token(raw_token: str) -> str | None:
+    """Validate a cookie token. Returns username if valid, None if invalid/expired."""
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    conn = _connect()
+    row = conn.execute(
+        "SELECT username, expires_at FROM remember_tokens WHERE token_hash = ?",
+        (token_hash,),
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        return None
+    if datetime.fromisoformat(row["expires_at"]) < datetime.now():
+        revoke_remember_token(raw_token)
+        return None
+    return row["username"]
+
+
+def revoke_remember_token(raw_token: str):
+    """Delete a token (on logout or expiry)."""
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    conn = _connect()
+    conn.execute("DELETE FROM remember_tokens WHERE token_hash = ?", (token_hash,))
     conn.commit()
     conn.close()
 

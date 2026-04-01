@@ -6,3 +6,4 @@ Pillow
 plotly
 reportlab
 bcrypt
+streamlit-cookies-controller

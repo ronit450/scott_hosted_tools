@@ -1,5 +1,12 @@
 /* Stone Harp Analytics — Streamlit CSS Override */
 
+/* ── Hide Streamlit chrome (deploy button, toolbar, hamburger menu) ── */
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stStatusWidget"] { display: none !important; }
+.stDeployButton { display: none !important; }
+#MainMenu { display: none !important; }
+footer { display: none !important; }
+
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 
 /* ── Root variables ── */

@@ -80,6 +80,10 @@ def _show_splash():
     <style>
     [data-testid="stSidebar"] { display: none !important; }
     .stApp > header { display: none !important; }
+    [data-testid="stToolbar"] { display: none !important; }
+    [data-testid="stStatusWidget"] { display: none !important; }
+    .stDeployButton { display: none !important; }
+    #MainMenu { display: none !important; }
     [data-testid="stAppViewBlockContainer"] { animation: none !important; padding: 0 !important; }
 
     .splash-wrap {
@@ -613,9 +617,9 @@ def _landing_page():
     # ── Compact action row ──
     st.markdown("")
     if user["role"] == "admin":
-        _, so_col, admin_col, _ = st.columns([5, 0.8, 0.8, 5])
+        _, so_col, admin_col, _ = st.columns([4, 1.5, 1.5, 4])
     else:
-        _, so_col, _ = st.columns([5, 0.8, 5])
+        _, so_col, _ = st.columns([4, 1.5, 4])
 
     with so_col:
         if st.button("Sign Out", key="landing_logout", use_container_width=True):
@@ -623,7 +627,7 @@ def _landing_page():
 
     if user["role"] == "admin":
         with admin_col:
-            if st.button("Admin", use_container_width=True, key="btn_admin"):
+            if st.button("Admin Panel", use_container_width=True, key="btn_admin"):
                 st.session_state["active_tool"] = "admin"
                 st.rerun()
 
@@ -649,14 +653,7 @@ if "_splash_done" not in st.session_state:
     st.rerun()
 
 # ── Page config (must be first Streamlit command after splash) ──
-logged_in_now = "auth_user" in st.session_state
-active_tool_now = st.session_state.get("active_tool")
-if not logged_in_now:
-    st.set_page_config(page_title="Sign In — Stone Harp Analytics", page_icon="🔐", layout="wide")
-elif active_tool_now:
-    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide")
-else:
-    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide")
+st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide")
 
 # ── 2. Session timeout check ──
 if "auth_user" in st.session_state:
@@ -674,22 +671,33 @@ if "auth_user" in st.session_state:
     st.session_state["_last_active"] = time.time()
 
 # ── 3. Cookie auto-login (Remember Me) ──
+# CookieController needs one render cycle to receive cookies from the browser.
+# Cycle 1: instantiate controller, mark not ready, show nothing, rerun.
+# Cycle 2: cookies are available, check token, then proceed.
 if "auth_user" not in st.session_state:
     try:
         ctrl = _get_cookie_controller()
-        raw_token = ctrl.get(COOKIE_NAME)
-        if raw_token:
-            username = validate_remember_token(raw_token)
-            if username:
-                u = get_user(username)
-                if u and u["is_active"]:
-                    st.session_state["auth_user"] = u
-                    st.session_state["_last_active"] = time.time()
-                    st.session_state["_remember_token"] = raw_token
-                    sid = log_login(username, "cookie-autologin")
-                    st.session_state["auth_session_id"] = sid
-                    log_activity(username, "app", "login", "Auto-login via Remember Me")
-                    st.rerun()
+        if "_cookie_check_done" not in st.session_state:
+            # First cycle — controller just mounted, cookies not available yet
+            # Show a blank page (not login) to avoid flash
+            st.session_state["_cookie_check_done"] = False
+            st.rerun()
+        elif not st.session_state["_cookie_check_done"]:
+            # Second cycle — now cookies are readable
+            st.session_state["_cookie_check_done"] = True
+            raw_token = ctrl.get(COOKIE_NAME)
+            if raw_token:
+                username = validate_remember_token(raw_token)
+                if username:
+                    u = get_user(username)
+                    if u and u["is_active"]:
+                        st.session_state["auth_user"] = u
+                        st.session_state["_last_active"] = time.time()
+                        st.session_state["_remember_token"] = raw_token
+                        sid = log_login(username, "cookie-autologin")
+                        st.session_state["auth_session_id"] = sid
+                        log_activity(username, "app", "login", "Auto-login via Remember Me")
+                        st.rerun()
     except Exception:
         pass
 

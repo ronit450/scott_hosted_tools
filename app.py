@@ -35,104 +35,11 @@ ASSETS = os.path.join(os.path.dirname(__file__), "assets")
 
 
 def _load_css():
-    """Load the shared style.css + page-transition loader script."""
+    """Load the shared style.css."""
     css_path = os.path.join(ASSETS, "style.css")
     if os.path.exists(css_path):
         css = Path(css_path).read_text()
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-
-    # Page transition loader — uses st.components.v1.html for JS execution
-    import streamlit.components.v1 as components
-    components.html("""
-    <style>
-    #sha-page-loader {
-        position: fixed; top: 0; left: 0; right: 0; height: 3px;
-        z-index: 99999; pointer-events: none; opacity: 0;
-        background: linear-gradient(90deg, transparent, #c0a87e 20%, #d4c4a0 50%, #c0a87e 80%, transparent);
-        background-size: 200% 100%;
-        transition: opacity 0.15s ease;
-    }
-    #sha-page-loader.active {
-        opacity: 1;
-        animation: sha-shimmer 1s ease-in-out infinite;
-    }
-    @keyframes sha-shimmer {
-        0%   { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-    }
-    #sha-page-overlay {
-        position: fixed; inset: 0; z-index: 99998;
-        background: rgba(6, 10, 20, 0.4);
-        pointer-events: none; opacity: 0;
-        transition: opacity 0.2s ease;
-    }
-    #sha-page-overlay.active { opacity: 1; }
-    </style>
-    <script>
-    // Inject loader elements into the PARENT document (Streamlit's main frame)
-    const parentDoc = window.parent.document;
-
-    // Only inject once
-    if (!parentDoc.getElementById('sha-page-loader')) {
-        const loader = parentDoc.createElement('div');
-        loader.id = 'sha-page-loader';
-        loader.style.cssText = 'position:fixed;top:0;left:0;right:0;height:3px;z-index:99999;pointer-events:none;opacity:0;background:linear-gradient(90deg,transparent,#c0a87e 20%,#d4c4a0 50%,#c0a87e 80%,transparent);background-size:200% 100%;transition:opacity 0.15s ease;';
-        parentDoc.body.appendChild(loader);
-
-        const overlay = parentDoc.createElement('div');
-        overlay.id = 'sha-page-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(6,10,20,0.4);pointer-events:none;opacity:0;transition:opacity 0.2s ease;';
-        parentDoc.body.appendChild(overlay);
-
-        // Add shimmer animation
-        const style = parentDoc.createElement('style');
-        style.textContent = '@keyframes sha-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}';
-        parentDoc.head.appendChild(style);
-
-        function showLoader() {
-            loader.style.opacity = '1';
-            loader.style.animation = 'sha-shimmer 1s ease-in-out infinite';
-            overlay.style.opacity = '1';
-        }
-        function hideLoader() {
-            loader.style.opacity = '0';
-            loader.style.animation = 'none';
-            overlay.style.opacity = '0';
-        }
-
-        // Intercept sidebar nav clicks
-        parentDoc.addEventListener('click', function(e) {
-            const link = e.target.closest('a[data-testid="stSidebarNavLink"], nav a');
-            if (link) showLoader();
-        }, true);
-
-        // Intercept navigation buttons (Open Tracker, Back to Home, Sign In/Out)
-        parentDoc.addEventListener('click', function(e) {
-            const btn = e.target.closest('button');
-            if (btn) {
-                const text = (btn.textContent || '').toLowerCase();
-                if (text.includes('open') || text.includes('back') || text.includes('sign')) {
-                    showLoader();
-                }
-            }
-        }, true);
-
-        // Hide loader when Streamlit finishes re-rendering
-        const app = parentDoc.querySelector('[data-testid="stAppViewBlockContainer"]');
-        if (app) {
-            new MutationObserver(function() { hideLoader(); })
-                .observe(app, { childList: true, subtree: true });
-        }
-
-        // Fallback: auto-hide after 4s
-        setInterval(function() {
-            if (parseFloat(loader.style.opacity) > 0) {
-                setTimeout(hideLoader, 4000);
-            }
-        }, 5000);
-    }
-    </script>
-    """, height=0)
 
 
 # SVG constants used across pages

@@ -28,8 +28,14 @@ init_db()
 seed_all()
 
 # Log data paths on startup (helps debug Render persistent disk issues)
-print(f"[STARTUP] DATA_DIR env = {os.environ.get('DATA_DIR', 'NOT SET (using local data/)')}")
-print(f"[STARTUP] Data dir exists: {os.path.isdir(os.environ.get('DATA_DIR', 'data'))}")
+from auth.auth_db import DB_PATH as _auth_db_path
+from db.database import DB_PATH as _tracker_db_path
+print(f"[STARTUP] DATA_DIR env = {os.environ.get('DATA_DIR', 'NOT SET')}")
+print(f"[STARTUP] /data dir exists = {os.path.isdir('/data')}")
+print(f"[STARTUP] auth.db path = {_auth_db_path}")
+print(f"[STARTUP] tracker.db path = {_tracker_db_path}")
+if os.path.isdir('/data'):
+    print(f"[STARTUP] /data contents = {os.listdir('/data')}")
 
 # Auto-backup every 8 hours, clean up backups older than 15 days
 auto_backup_if_due()

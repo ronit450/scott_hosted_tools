@@ -3,8 +3,10 @@ import threading
 from pathlib import Path
 
 import os as _os
-# Use DATA_DIR env var on Render (persistent disk); fall back to local data/ folder
-DB_DIR = Path(_os.environ.get("DATA_DIR", str(Path(__file__).parent.parent / "data")))
+# Persistent storage: check env var first, then auto-detect Render disk, then local fallback
+DB_DIR = Path(_os.environ.get("DATA_DIR") or (
+    "/data" if _os.path.isdir("/data") else str(Path(__file__).parent.parent / "data")
+))
 DB_PATH = DB_DIR / "tracker.db"
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 

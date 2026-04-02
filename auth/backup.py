@@ -10,8 +10,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import os as _os
-# Use DATA_DIR env var on Render (persistent disk); fall back to local data/ folder
-DATA_DIR = Path(_os.environ.get("DATA_DIR", str(Path(__file__).parent.parent / "data")))
+# Persistent storage: check env var first, then auto-detect Render disk, then local fallback
+DATA_DIR = Path(_os.environ.get("DATA_DIR") or (
+    "/data" if _os.path.isdir("/data") else str(Path(__file__).parent.parent / "data")
+))
 BACKUP_DIR = DATA_DIR / "backups"
 
 # Which databases to back up

@@ -10,8 +10,10 @@ from datetime import datetime
 
 import bcrypt
 
-# Use DATA_DIR env var on Render (persistent disk); fall back to local data/ folder
-_data_dir = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(__file__), "..", "data"))
+# Persistent storage: check env var first, then auto-detect Render disk, then local fallback
+_data_dir = os.environ.get("DATA_DIR") or (
+    "/data" if os.path.isdir("/data") else os.path.join(os.path.dirname(__file__), "..", "data")
+)
 DB_PATH = os.path.join(_data_dir, "auth.db")
 
 

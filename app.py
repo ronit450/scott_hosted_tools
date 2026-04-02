@@ -276,76 +276,200 @@ def _show_splash():
 
 
 def _login_page():
-    """Login — centered card with ambient background."""
+    """Login — immersive split-screen: branding left, form right."""
     _load_css()
 
-    # ── Login form ──
+    # ── Hide sidebar + header, set up full-viewport split ──
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display: none !important; }
     .stApp > header { display: none !important; }
+    [data-testid="stAppViewBlockContainer"] {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    .block-container { padding: 0 !important; max-width: 100% !important; }
 
-    .bg-grid {
-        position: fixed; inset: 0; z-index: 0; pointer-events: none;
-        background-image:
-            linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-        background-size: 60px 60px;
-        mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 70%);
-    }
-    .orb { position: fixed; border-radius: 50%; filter: blur(80px); z-index: 0; pointer-events: none; animation: drift 20s ease-in-out infinite alternate; }
-    .orb-1 { width: 400px; height: 400px; background: rgba(192,168,126,0.07); top: -100px; right: -100px; animation-duration: 25s; }
-    .orb-2 { width: 300px; height: 300px; background: rgba(79,124,255,0.05); bottom: -80px; left: -80px; animation-duration: 30s; animation-direction: alternate-reverse; }
-    @keyframes drift {
-        0%  { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(30px, -20px) scale(1.05); }
-        100%{ transform: translate(-20px, 15px) scale(0.95); }
-    }
     @keyframes fadeUp {
         from { opacity: 0; transform: translateY(24px); }
         to   { opacity: 1; transform: translateY(0); }
     }
-    .login-brand { text-align: center; margin-bottom: 2rem; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
-    .login-brand .logo-mark {
-        width: 72px; height: 72px; margin: 0 auto 1.25rem; border-radius: 18px;
-        background: linear-gradient(135deg, rgba(192,168,126,0.15), rgba(192,168,126,0.05));
-        border: 1px solid rgba(192,168,126,0.2); display: flex; align-items: center; justify-content: center;
-        color: #c0a87e; box-shadow: 0 0 40px rgba(192,168,126,0.08);
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(30px); }
+        to   { opacity: 1; transform: translateX(0); }
     }
-    .login-brand .logo-mark svg { width: 36px; height: 36px; fill: #c0a87e; }
-    .login-brand h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.75rem; font-weight: 600; color: #f1f1f4; margin-bottom: 0.375rem; }
-    .login-brand p { font-size: 0.875rem; color: #8b8fa3; }
-    .login-footer { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: #5a5e72; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both; }
-    .login-footer span { color: #c0a87e; opacity: 0.6; }
+    @keyframes ringPulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+        50%      { transform: translate(-50%, -50%) scale(1.08); opacity: 0.7; }
+    }
+    @keyframes glowPulse {
+        0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+        50%      { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
+    }
 
-    [data-testid="stForm"] {
-        background: rgba(17, 24, 39, 0.6) !important;
-        backdrop-filter: blur(24px) saturate(1.2) !important;
-        border: 1px solid rgba(255,255,255,0.06) !important;
-        border-radius: 20px !important;
-        padding: 2.25rem 2rem 2rem !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.03) !important;
-        max-width: 420px; margin: 0 auto;
+    .login-brand-panel {
+        background: linear-gradient(135deg, #0a0e1a, #0f1520);
+        min-height: 100vh;
+        padding: 2.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+    .login-brand-panel .grid-overlay {
+        position: absolute; inset: 0;
+        background-image:
+            linear-gradient(rgba(192,168,126,0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(192,168,126,0.02) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
+    }
+    .login-brand-panel .ring {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 1px solid rgba(192,168,126,0.06);
+        pointer-events: none;
+    }
+    .login-brand-panel .ring-1 { width: 300px; height: 300px; }
+    .login-brand-panel .ring-2 {
+        width: 200px; height: 200px;
+        border-color: rgba(192,168,126,0.1);
+        animation: ringPulse 6s ease-in-out infinite;
+    }
+    .login-brand-panel .glow {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 350px; height: 350px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(192,168,126,0.08), transparent 70%);
+        filter: blur(60px);
+        pointer-events: none;
+        animation: glowPulse 8s ease-in-out infinite;
+    }
+
+    .brand-top {
+        position: relative; z-index: 1;
+        display: flex; align-items: center; gap: 0.75rem;
+        animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+    }
+    .brand-top .logo-box {
+        width: 40px; height: 40px; border-radius: 10px;
+        background: linear-gradient(135deg, rgba(192,168,126,0.18), rgba(192,168,126,0.06));
+        border: 1px solid rgba(192,168,126,0.25);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .brand-top .logo-box svg { width: 20px; height: 20px; fill: #c0a87e; }
+    .brand-top span {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 1rem; font-weight: 600; color: #f1f1f4;
+    }
+
+    .brand-hero {
+        position: relative; z-index: 1;
+        text-align: center;
+        animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+    }
+    .brand-hero h1 {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 2.75rem; font-weight: 600; line-height: 1.15;
+        margin: 0;
+    }
+    .brand-hero h1 .white { color: #f1f1f4; }
+    .brand-hero h1 .gold  { color: #c0a87e; }
+    .brand-hero p {
+        font-size: 0.875rem; color: #8b8fa3; margin-top: 1rem;
+        max-width: 300px; margin-left: auto; margin-right: auto;
+    }
+
+    .brand-stats {
+        position: relative; z-index: 1;
+        display: flex; justify-content: center; gap: 2.5rem;
+        animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+    }
+    .brand-stats .stat { text-align: center; }
+    .brand-stats .stat-value {
+        font-size: 1.5rem; font-weight: 700;
+        font-family: 'DM Sans', sans-serif;
+    }
+    .brand-stats .stat-label {
+        font-size: 0.6875rem; color: #8b8fa3;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        margin-top: 0.25rem;
+    }
+    .brand-stats .stat-divider {
+        width: 1px;
+        background: rgba(255,255,255,0.06);
+        align-self: stretch;
+    }
+
+    .login-form-panel [data-testid="stForm"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        max-width: none;
     }
     </style>
-    <div class="bg-grid"></div>
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
     """, unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="login-brand">
-        <div class="logo-mark">{LOGO_SVG}</div>
-        <h1>Stone Harp Analytics</h1>
-        <p>Sign in to your workspace</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── Layout: two columns ──
+    col_brand, col_form = st.columns([1.2, 0.8], gap="none")
 
-    with st.form("login_form", clear_on_submit=False):
-        username = st.text_input("Username", placeholder="Enter your username")
-        password = st.text_input("Password", type="password", placeholder="Enter your password")
-        remember_me = st.checkbox("Remember me for 30 days", value=True)
-        submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
+    with col_brand:
+        st.markdown(f"""
+        <div class="login-brand-panel">
+            <div class="grid-overlay"></div>
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="glow"></div>
+
+            <div class="brand-top">
+                <div class="logo-box">{LOGO_SVG}</div>
+                <span>Stone Harp Analytics</span>
+            </div>
+
+            <div class="brand-hero">
+                <h1>
+                    <span class="white">Intelligence</span><br>
+                    <span class="gold">Reimagined</span>
+                </h1>
+                <p>Geospatial analysis, data conversion, and imagery tiling — unified in one platform.</p>
+            </div>
+
+            <div class="brand-stats">
+                <div class="stat">
+                    <div class="stat-value" style="color:#4f7cff;">3</div>
+                    <div class="stat-label">Tools</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <div class="stat-value" style="color:#2dd4bf;">24/7</div>
+                    <div class="stat-label">Access</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <div class="stat-value" style="color:#f59e0b;">Secure</div>
+                    <div class="stat-label">Platform</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_form:
+        st.markdown("")
+        st.markdown("")
+        st.markdown("")
+        st.markdown("""<h2 style="font-family:'Playfair Display',Georgia,serif;font-size:1.5rem;font-weight:600;color:#f1f1f4;margin-bottom:0.25rem;">Welcome back</h2>""", unsafe_allow_html=True)
+        st.markdown("""<p style="font-size:0.875rem;color:#8b8fa3;margin-bottom:1rem;">Sign in to continue</p>""", unsafe_allow_html=True)
+
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            remember_me = st.checkbox("Remember me for 30 days", value=True)
+            submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
+
+        st.markdown('<div style="text-align:center;font-size:0.75rem;color:#5a5e72;margin-top:1.5rem;"><span style="color:#c0a87e;opacity:0.6;">&#9670;</span>&ensp;Secure access&ensp;<span style="color:#c0a87e;opacity:0.6;">&#9670;</span></div>', unsafe_allow_html=True)
 
     if submitted:
         if not username or not password:
@@ -386,8 +510,6 @@ def _login_page():
                 st.error("Account locked for 5 minutes due to too many failed attempts.")
             else:
                 st.error("Invalid username or password.")
-
-    st.markdown('<div class="login-footer"><span>&#9670;</span>&ensp;Secure access&ensp;<span>&#9670;</span></div>', unsafe_allow_html=True)
 
 
 def _landing_page():

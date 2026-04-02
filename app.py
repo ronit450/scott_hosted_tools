@@ -630,21 +630,21 @@ def _back_to_home():
 
 # ── 1. Splash screen (every new session, before anything else) ──
 if "_splash_done" not in st.session_state:
-    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="centered")
+    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide")
     _show_splash()
     st.session_state["_splash_done"] = True
-    time.sleep(3)
+    time.sleep(2)
     st.rerun()
 
 # ── Page config (must be first Streamlit command after splash) ──
 logged_in_now = "auth_user" in st.session_state
 active_tool_now = st.session_state.get("active_tool")
 if not logged_in_now:
-    st.set_page_config(page_title="Sign In — Stone Harp Analytics", page_icon="🔐", layout="centered")
+    st.set_page_config(page_title="Sign In — Stone Harp Analytics", page_icon="🔐", layout="wide")
 elif active_tool_now:
     st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide")
 else:
-    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title="Stone Harp Analytics", page_icon="🌐", layout="wide")
 
 # ── 2. Session timeout check ──
 if "auth_user" in st.session_state:

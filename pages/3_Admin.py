@@ -168,9 +168,12 @@ def _role_badge(role):
 
 
 def _access_badge(access):
-    cls_map = {"both": "adm-badge-both", "tracker": "adm-badge-tracker", "hermes": "adm-badge-hermes"}
+    label_map = {"all": "All Tools", "both": "All Tools", "hermes_daedalus": "Hermes + Daedalus",
+                 "tracker": "Tracker", "hermes": "Hermes", "daedalus": "Daedalus"}
+    cls_map = {"all": "adm-badge-both", "both": "adm-badge-both", "hermes_daedalus": "adm-badge-hermes"}
     cls = cls_map.get(access, "adm-badge-both")
-    return f'<span class="adm-badge {cls}">{access.capitalize()}</span>'
+    label = label_map.get(access, access.capitalize())
+    return f'<span class="adm-badge {cls}">{label}</span>'
 
 
 def _status_badge(is_active):
@@ -191,7 +194,9 @@ with tab_users:
             new_pass  = st.text_input("Password", type="password", key="nu_pass")
         with nu2:
             new_role   = st.selectbox("Role", ["user", "admin"], key="nu_role")
-            new_access = st.selectbox("Tool Access", ["both", "tracker", "hermes", "daedalus"], key="nu_access")
+            new_access = st.selectbox("Tool Access", ["all", "hermes_daedalus"],
+                                     format_func=lambda x: {"all": "All Tools", "hermes_daedalus": "Hermes + Daedalus"}.get(x, x),
+                                     key="nu_access")
         if st.button("Create User", type="primary", key="nu_create"):
             if not new_uname or not new_name or not new_pass:
                 st.error("Fill in all fields.")
@@ -261,8 +266,17 @@ with tab_users:
                                                 index=0 if u["role"] == "user" else 1,
                                                 key=f"eu_role_{u['username']}")
                     with ec2:
-                        e_access = st.selectbox("Tool Access", ["both", "tracker", "hermes", "daedalus"],
-                                                index=["both","tracker","hermes","daedalus"].index(u["tool_access"]),
+                        access_options = ["all", "hermes_daedalus"]
+                        access_labels = {"all": "All Tools", "hermes_daedalus": "Hermes + Daedalus"}
+                        # Map legacy values
+                        current_access = u["tool_access"]
+                        if current_access == "both":
+                            current_access = "all"
+                        if current_access not in access_options:
+                            current_access = "all"
+                        e_access = st.selectbox("Tool Access", access_options,
+                                                index=access_options.index(current_access),
+                                                format_func=lambda x: access_labels.get(x, x),
                                                 key=f"eu_access_{u['username']}")
                         e_active = st.checkbox("Active", value=bool(u["is_active"]), key=f"eu_active_{u['username']}")
                     e_pass = st.text_input("New Password (leave blank to keep)", type="password",

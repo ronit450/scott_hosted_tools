@@ -159,8 +159,16 @@ def require_login(tool: str = "app"):
     user = st.session_state["auth_user"]
 
     # Check tool access
-    access = user.get("tool_access", "both")
-    if tool not in ("admin", "app") and access != "both" and access != tool:
+    access = user.get("tool_access", "all")
+    # Resolve which tools the user can access
+    allowed_tools = set()
+    if access in ("all", "both"):
+        allowed_tools = {"tracker", "hermes", "daedalus"}
+    elif access == "hermes_daedalus":
+        allowed_tools = {"hermes", "daedalus"}
+    else:
+        allowed_tools = {access}  # legacy single-tool values
+    if tool not in ("admin", "app") and tool not in allowed_tools:
         st.error(f"You don't have access to **{tool}**. Contact your admin.")
         _logout_button()
         st.stop()

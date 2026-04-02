@@ -562,11 +562,17 @@ def _landing_page():
     """, unsafe_allow_html=True)
 
     # Tool cards — use columns for layout, HTML for visuals, st.button for action
-    access = user.get("tool_access", "both")
+    access = user.get("tool_access", "all")
+    if access in ("all", "both"):
+        allowed = {"tracker", "hermes", "daedalus"}
+    elif access == "hermes_daedalus":
+        allowed = {"hermes", "daedalus"}
+    else:
+        allowed = {access}
 
     _, col_tracker, sp1, col_hermes, sp2, col_daedalus, _ = st.columns([0.4, 2, 0.12, 2, 0.12, 2, 0.4])
 
-    if access in ("both", "tracker"):
+    if "tracker" in allowed:
         with col_tracker:
             st.markdown("""
             <div class="tool-card tracker">
@@ -582,7 +588,7 @@ def _landing_page():
                 log_activity(user["username"], "tracker", "open", "Opened Dashboard Tracker")
                 st.rerun()
 
-    if access in ("both", "hermes"):
+    if "hermes" in allowed:
         with col_hermes:
             st.markdown("""
             <div class="tool-card hermes">
@@ -598,7 +604,7 @@ def _landing_page():
                 log_activity(user["username"], "hermes", "open", "Opened Hermes")
                 st.rerun()
 
-    if access in ("both", "daedalus"):
+    if "daedalus" in allowed:
         with col_daedalus:
             st.markdown("""
             <div class="tool-card daedalus">

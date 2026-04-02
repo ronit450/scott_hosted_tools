@@ -402,36 +402,41 @@ def build_aois_with_config(
 # ------------------------------------------------------
 
 def generate_tiles_with_offset(aoi_geom_local, tile_size_km: float,
-                               offset_x_frac: float, offset_y_frac: float):
+                               offset_x_frac: float, offset_y_frac: float,
+                               tile_width_km: float = None, tile_height_km: float = None):
     """
     Generate tiles over AOI bounding box with given offset fractions.
     Tiles store geometry and precomputed intersection with AOI in local CRS.
+    Supports rectangular tiles via tile_width_km x tile_height_km.
+    Falls back to tile_size_km (square) if width/height not provided.
     """
-    tile_size_m = tile_size_km * 1000.0
+    tw_m = (tile_width_km if tile_width_km else tile_size_km) * 1000.0
+    th_m = (tile_height_km if tile_height_km else tile_size_km) * 1000.0
     minx, miny, maxx, maxy = aoi_geom_local.bounds
 
     # Expand by one tile to avoid clipping edges
-    minx -= tile_size_m
-    miny -= tile_size_m
-    maxx += tile_size_m
-    maxy += tile_size_m
+    minx -= tw_m
+    miny -= th_m
+    maxx += tw_m
+    maxy += th_m
 
     tiles = []
     tile_id = 1
-    half = tile_size_m / 2.0
+    half_w = tw_m / 2.0
+    half_h = th_m / 2.0
 
-    dx = offset_x_frac * tile_size_m
-    dy = offset_y_frac * tile_size_m
+    dx = offset_x_frac * tw_m
+    dy = offset_y_frac * th_m
 
-    x = minx + half + dx
+    x = minx + half_w + dx
     while x <= maxx:
-        y = miny + half + dy
+        y = miny + half_h + dy
         while y <= maxy:
-            poly = box(x - half, y - half, x + half, y + half)
+            poly = box(x - half_w, y - half_h, x + half_w, y + half_h)
             if poly.intersects(aoi_geom_local):
                 inter = poly.intersection(aoi_geom_local)
                 inside_area = inter.area
-                tile_area = tile_size_m * tile_size_m
+                tile_area = tw_m * th_m
                 inside_fraction = inside_area / tile_area if tile_area > 0 else 0.0
 
                 tiles.append(
@@ -446,8 +451,8 @@ def generate_tiles_with_offset(aoi_geom_local, tile_size_km: float,
                     }
                 )
                 tile_id += 1
-            y += tile_size_m
-        x += tile_size_m
+            y += th_m
+        x += tw_m
 
     return tiles
 
@@ -869,6 +874,8 @@ def process_single_aoi(
     minimal_coverage_floor: float,
     compact_min_inside_fraction: float,
     global_radius_km_default: float,
+    tile_width_km: float = None,
+    tile_height_km: float = None,
 ) -> Dict[str, Any]:
     """
     Run the tiling optimization for a single AOI dict, write outputs,
@@ -908,13 +915,18 @@ def process_single_aoi(
     else:
         raise ValueError(f"Unknown AOI type: {aoi_type}")
 
-    tile_size_m = tile_size_km * 1000.0
+    tw_km = tile_width_km if tile_width_km else tile_size_km
+    th_km = tile_height_km if tile_height_km else tile_size_km
+    tile_area_m2 = (tw_km * 1000.0) * (th_km * 1000.0)
+    # For functions that expect a single tile_size_m (area-based metrics), use actual area
+    tile_size_m = (tw_km * th_km) ** 0.5 * 1000.0  # effective square-equivalent for metrics
     candidates: List[Dict[str, Any]] = []
 
     # Generate / prune / score candidates
     for ox in offset_fractions_x:
         for oy in offset_fractions_y:
-            raw_tiles = generate_tiles_with_offset(aoi_geom_local, tile_size_km, ox, oy)
+            raw_tiles = generate_tiles_with_offset(aoi_geom_local, tile_size_km, ox, oy,
+                                                   tile_width_km=tw_km, tile_height_km=th_km)
             pruned_tiles = prune_tiles(
                 aoi_geom_local,
                 raw_tiles,
@@ -973,7 +985,8 @@ def process_single_aoi(
     # 4) max_coverage: same offset as 'full', but NO greedy pruning
     full_ox = full["offset_x_frac"]
     full_oy = full["offset_y_frac"]
-    raw_tiles_full = generate_tiles_with_offset(aoi_geom_local, tile_size_km, full_ox, full_oy)
+    raw_tiles_full = generate_tiles_with_offset(aoi_geom_local, tile_size_km, full_ox, full_oy,
+                                                   tile_width_km=tw_km, tile_height_km=th_km)
     maxcov_tiles = [t for t in raw_tiles_full if t["inside_fraction"] >= min_tile_inside_fraction]
     maxcov_metrics = compute_solution_metrics(aoi_geom_local, maxcov_tiles, tile_size_m)
     maxcov_metrics["offset_x_frac"] = full_ox
@@ -1077,6 +1090,8 @@ def run_tiling(
     aoi_input: Optional[str] = None,
     aoi_layer: Optional[str] = AOI_LAYER,
     tile_size_km: float = TILE_SIZE_KM,
+    tile_width_km: float = None,
+    tile_height_km: float = None,
     out_dir: Optional[str] = None,
     min_tile_inside_fraction: float = MIN_TILE_INSIDE_FRACTION,
     coverage_floor: float = COVERAGE_FLOOR,
@@ -1166,6 +1181,8 @@ def run_tiling(
             minimal_coverage_floor=minimal_coverage_floor,
             compact_min_inside_fraction=compact_min_inside_fraction,
             global_radius_km_default=radius_km,
+            tile_width_km=tile_width_km,
+            tile_height_km=tile_height_km,
         )
         all_aoi_results.append(aoi_result)
 

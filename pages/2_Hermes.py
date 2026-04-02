@@ -52,6 +52,14 @@ if not any([want_geojson, want_kml, want_shp]):
     st.warning("Select at least one export format.")
     st.stop()
 
+# ── Output filename ────────────────────────────────────────────
+stem_default = os.path.splitext(uploaded.name)[0] if uploaded else "hermes_output"
+output_filename = st.text_input(
+    "Output Filename",
+    value=f"{stem_default}_hermes_output",
+    help="Name for the downloaded zip file (without extension)",
+)
+
 # ── Convert ────────────────────────────────────────────────────
 if st.button("Convert", type="primary", use_container_width=False):
     log_lines = []
@@ -108,7 +116,7 @@ if st.button("Convert", type="primary", use_container_width=False):
             st.download_button(
                 label=f"⬇ Download All ({len(output_files)} files)",
                 data=zip_buffer,
-                file_name=f"{stem}_hermes_output.zip",
+                file_name=f"{output_filename.strip() or stem + '_hermes_output'}.zip",
                 mime="application/zip",
                 use_container_width=True,
                 type="primary",

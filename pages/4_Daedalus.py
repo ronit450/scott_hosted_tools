@@ -58,15 +58,24 @@ else:
 
 # -- Tiling Configuration --
 st.markdown("**Tiling Configuration**")
-tc1, tc2 = st.columns(2)
+tc1, tc2, tc3 = st.columns(3)
 with tc1:
-    tile_size_km = st.number_input("Tile Size (km)", value=5.0, min_value=0.1, step=0.5)
+    tile_width_km = st.number_input("Tile Width (km)", value=5.0, min_value=0.1, step=0.5)
 with tc2:
+    tile_height_km = st.number_input("Tile Height (km)", value=5.0, min_value=0.1, step=0.5)
+with tc3:
     min_inside_frac = st.slider(
         "Min tile inside fraction",
         min_value=0.05, max_value=0.50, value=0.20, step=0.05,
         help="Minimum fraction of a tile that must overlap the AOI to keep it",
     )
+
+# -- Output filename --
+output_filename = st.text_input(
+    "Output Filename",
+    value="daedalus_tiling_output",
+    help="Name for the downloaded zip file (without extension)",
+)
 
 # -- Strategy Selection --
 st.markdown("**Strategies to include**")
@@ -99,7 +108,8 @@ if st.button("Run Tiling", type="primary", use_container_width=False, disabled=n
                     result = run_tiling(
                         use_circle_aoi=False,
                         aoi_input=input_path,
-                        tile_size_km=tile_size_km,
+                        tile_width_km=tile_width_km,
+                        tile_height_km=tile_height_km,
                         out_dir=out_dir,
                         min_tile_inside_fraction=min_inside_frac,
                     )
@@ -109,7 +119,8 @@ if st.button("Run Tiling", type="primary", use_container_width=False, disabled=n
                         center_lat=center_lat,
                         center_lon=center_lon,
                         radius_km=radius_km,
-                        tile_size_km=tile_size_km,
+                        tile_width_km=tile_width_km,
+                        tile_height_km=tile_height_km,
                         out_dir=out_dir,
                         min_tile_inside_fraction=min_inside_frac,
                     )
@@ -181,10 +192,11 @@ if st.button("Run Tiling", type="primary", use_container_width=False, disabled=n
                                 zf.writestr(fname, data)
                         zip_buffer.seek(0)
 
+                        safe_name = output_filename.strip() or "daedalus_tiling_output"
                         st.download_button(
                             label=f"Download All ({len(output_files)} files)",
                             data=zip_buffer,
-                            file_name="daedalus_tiling_output.zip",
+                            file_name=f"{safe_name}.zip",
                             mime="application/zip",
                             use_container_width=True,
                             type="primary",
@@ -194,7 +206,7 @@ if st.button("Run Tiling", type="primary", use_container_width=False, disabled=n
                 log_activity(
                     user.get("username", "unknown"), "daedalus", "tiling",
                     f"mode={'circle' if aoi_mode.startswith('Circle') else 'file'}, "
-                    f"tile_size={tile_size_km}km, aois={len(aois)}"
+                    f"tile={tile_width_km}x{tile_height_km}km, aois={len(aois)}"
                 )
 
         except Exception as exc:

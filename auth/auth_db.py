@@ -32,7 +32,7 @@ def init_auth_db():
             name        TEXT NOT NULL,
             password_hash TEXT NOT NULL,
             role        TEXT NOT NULL DEFAULT 'user',  -- 'admin' or 'user'
-            tool_access TEXT NOT NULL DEFAULT 'both',  -- 'tracker', 'hermes', 'both'
+            tool_access TEXT NOT NULL DEFAULT 'both',  -- 'tracker', 'hermes', 'daedalus', 'both'
             is_active   INTEGER NOT NULL DEFAULT 1,
             created_at  TEXT NOT NULL DEFAULT (datetime('now')),
             last_login  TEXT

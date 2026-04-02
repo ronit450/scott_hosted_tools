@@ -191,7 +191,7 @@ with tab_users:
             new_pass  = st.text_input("Password", type="password", key="nu_pass")
         with nu2:
             new_role   = st.selectbox("Role", ["user", "admin"], key="nu_role")
-            new_access = st.selectbox("Tool Access", ["both", "tracker", "hermes"], key="nu_access")
+            new_access = st.selectbox("Tool Access", ["both", "tracker", "hermes", "daedalus"], key="nu_access")
         if st.button("Create User", type="primary", key="nu_create"):
             if not new_uname or not new_name or not new_pass:
                 st.error("Fill in all fields.")
@@ -261,8 +261,8 @@ with tab_users:
                                                 index=0 if u["role"] == "user" else 1,
                                                 key=f"eu_role_{u['username']}")
                     with ec2:
-                        e_access = st.selectbox("Tool Access", ["both", "tracker", "hermes"],
-                                                index=["both","tracker","hermes"].index(u["tool_access"]),
+                        e_access = st.selectbox("Tool Access", ["both", "tracker", "hermes", "daedalus"],
+                                                index=["both","tracker","hermes","daedalus"].index(u["tool_access"]),
                                                 key=f"eu_access_{u['username']}")
                         e_active = st.checkbox("Active", value=bool(u["is_active"]), key=f"eu_active_{u['username']}")
                     e_pass = st.text_input("New Password (leave blank to keep)", type="password",

@@ -582,6 +582,7 @@ def _landing_page():
     .tool-card:hover::before {{ opacity: 1; }}
     .tool-card.tracker {{ --card-accent: #4f7cff; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both; }}
     .tool-card.hermes {{ --card-accent: #2dd4bf; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both; }}
+    .tool-card.daedalus {{ --card-accent: #f59e0b; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both; }}
 
     .tool-icon {{
         width: 52px; height: 52px; border-radius: 14px;
@@ -590,6 +591,7 @@ def _landing_page():
     }}
     .tracker .tool-icon {{ background: linear-gradient(135deg, rgba(79,124,255,0.15), rgba(79,124,255,0.05)); border: 1px solid rgba(79,124,255,0.2); color: #4f7cff; }}
     .hermes .tool-icon {{ background: linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.05)); border: 1px solid rgba(45,212,191,0.2); color: #2dd4bf; }}
+    .daedalus .tool-icon {{ background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); border: 1px solid rgba(245,158,11,0.2); color: #f59e0b; }}
     .tool-card:hover .tool-icon {{ transform: scale(1.08); }}
 
     .tool-icon svg {{ width: 26px; height: 26px; }}
@@ -600,6 +602,7 @@ def _landing_page():
     .tool-cta svg {{ width: 16px; height: 16px; }}
     .tracker .tool-cta {{ color: #4f7cff; }}
     .hermes .tool-cta {{ color: #2dd4bf; }}
+    .daedalus .tool-cta {{ color: #f59e0b; }}
 
     /* Page footer */
     .page-footer {{ text-align: center; margin-top: 2rem; font-size: 0.6875rem; color: #5a5e72; animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both; }}
@@ -639,7 +642,7 @@ def _landing_page():
     # Tool cards — use columns for layout, HTML for visuals, st.button for action
     access = user.get("tool_access", "both")
 
-    _, col_tracker, spacer, col_hermes, _ = st.columns([0.8, 2, 0.15, 2, 0.8])
+    _, col_tracker, sp1, col_hermes, sp2, col_daedalus, _ = st.columns([0.4, 2, 0.12, 2, 0.12, 2, 0.4])
 
     if access in ("both", "tracker"):
         with col_tracker:
@@ -671,6 +674,22 @@ def _landing_page():
             if st.button("Open Hermes  →", use_container_width=True, key="btn_hermes", type="primary"):
                 st.session_state["active_tool"] = "hermes"
                 log_activity(user["username"], "hermes", "open", "Opened Hermes")
+                st.rerun()
+
+    if access in ("both", "daedalus"):
+        with col_daedalus:
+            st.markdown("""
+            <div class="tool-card daedalus">
+                <div class="tool-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                </div>
+                <div class="tool-name">Daedalus</div>
+                <div class="tool-desc">Generate optimised imagery tile grids from AOI files or circle definitions.</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Open Daedalus  →", use_container_width=True, key="btn_daedalus", type="primary"):
+                st.session_state["active_tool"] = "daedalus"
+                log_activity(user["username"], "daedalus", "open", "Opened Daedalus")
                 st.rerun()
 
     # Sign out button (in topbar position via CSS trickery)
@@ -781,6 +800,12 @@ elif active_tool == "hermes":
     pg = st.navigation({
         "": [st.Page(_back_to_home, title="Back to Home", icon="🏠")],
         "Hermes": [st.Page("pages/2_Hermes.py", title="Hermes", icon="🌍", default=True)],
+    })
+
+elif active_tool == "daedalus":
+    pg = st.navigation({
+        "": [st.Page(_back_to_home, title="Back to Home", icon="🏠")],
+        "Daedalus": [st.Page("pages/4_Daedalus.py", title="Daedalus", icon="🗺️", default=True)],
     })
 
 elif active_tool == "admin":

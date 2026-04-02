@@ -1,0 +1,271 @@
+#!/usr/bin/env python
+"""
+circle_tiling_5km.py
+
+Given:
+  - AOI center (lat, lon)
+  - AOI radius (km)
+
+This script:
+  - Builds a circular AOI
+  - Covers it with 5 km x 5 km square tiles (in a local metric CRS)
+  - Keeps only tiles that intersect the AOI
+  - Outputs:
+      1) centerpoints.csv  (tile_id, center_lat, center_lon)
+      2) tiles_and_aoi.geojson  (AOI + tile polygons in WGS84)
+  - Prints a simple coverage report to stdout.
+
+This is a simple "v1" implementation with:
+  - One regular grid
+  - No optimization over offsets yet
+"""
+
+import csv
+import math
+from pathlib import Path
+
+from shapely.geometry import Point, box
+from shapely.ops import unary_union
+from pyproj import CRS, Transformer
+import geopandas as gpd
+
+
+# -----------------------------
+# Configuration
+# -----------------------------
+
+# Default tile size (square) in kilometers
+TILE_SIZE_KM = 5.0
+
+# Output files
+OUTPUT_CENTERPOINTS_CSV = "centerpoints.csv"
+OUTPUT_TILES_GEOJSON = "tiles_and_aoi.geojson"
+
+
+# -----------------------------
+# Core functions
+# -----------------------------
+
+def get_local_crs(center_lat: float, center_lon: float) -> CRS:
+    """
+    Estimate a suitable local projected CRS (UTM) for the AOI center.
+    """
+    wgs84 = CRS.from_epsg(4326)
+    utm_crs = CRS.estimate_utm_crs(lat=center_lat, lon=center_lon)
+    return utm_crs
+
+
+def build_circle_aoi(center_lat: float, center_lon: float, radius_km: float,
+                     transformer_to_local: Transformer):
+    """
+    Build a circular AOI as a Shapely polygon in the local CRS (meters).
+    """
+    # Transform center to local meters
+    cx, cy = transformer_to_local.transform(center_lon, center_lat)
+
+    # Buffer in meters (Shapely buffer works in CRS units, here meters)
+    radius_m = radius_km * 1000.0
+    circle = Point(cx, cy).buffer(radius_m)
+
+    return circle, (cx, cy), radius_m
+
+
+def generate_tiles_over_circle(circle, tile_size_km: float):
+    """
+    Generate 5km x 5km square tiles covering the bounding box of the circle.
+    Everything is in local CRS (meters).
+
+    Returns a list of (tile_id, tile_polygon, tile_center_x, tile_center_y).
+    """
+    tile_size_m = tile_size_km * 1000.0
+
+    minx, miny, maxx, maxy = circle.bounds
+
+    # Expand bounding box by one tile size so edge coverage isn't clipped
+    minx -= tile_size_m
+    miny -= tile_size_m
+    maxx += tile_size_m
+    maxy += tile_size_m
+
+    tiles = []
+    tile_id = 1
+
+    # We create tile centers on a regular grid spaced by tile_size_m
+    # Each tile is centered at (cx, cy) with half-size tile_size_m / 2
+    half = tile_size_m / 2.0
+
+    # Start at first center >= minx+half, etc.
+    x = minx + half
+    while x <= maxx:
+        y = miny + half
+        while y <= maxy:
+            tile_poly = box(x - half, y - half, x + half, y + half)
+            # Keep only tiles that intersect the circle at all
+            if tile_poly.intersects(circle):
+                tiles.append((tile_id, tile_poly, x, y))
+                tile_id += 1
+            y += tile_size_m
+        x += tile_size_m
+
+    return tiles
+
+
+def compute_coverage_stats(circle, tiles):
+    """
+    Compute:
+      - AOI area
+      - Coverage area from union of tiles ∩ AOI
+      - Coverage fraction
+    """
+    aoi_area = circle.area
+
+    # Intersections of each tile with AOI
+    intersections = [tile_poly.intersection(circle) for (_, tile_poly, _, _) in tiles]
+    # Union of intersections
+    coverage_union = unary_union(intersections) if intersections else None
+
+    if coverage_union is None or coverage_union.is_empty:
+        coverage_area = 0.0
+    else:
+        coverage_area = coverage_union.area
+
+    coverage_fraction = coverage_area / aoi_area if aoi_area > 0 else 0.0
+
+    return aoi_area, coverage_area, coverage_fraction
+
+
+def export_centerpoints_csv(tiles, transformer_to_wgs84, output_path: Path):
+    """
+    Export tile centerpoints as CSV:
+    columns: tile_id, center_lat, center_lon
+    """
+    rows = []
+    for tile_id, _, cx, cy in tiles:
+        lon, lat = transformer_to_wgs84.transform(cx, cy)
+        rows.append({"tile_id": tile_id, "center_lat": lat, "center_lon": lon})
+
+    with output_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["tile_id", "center_lat", "center_lon"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def export_tiles_geojson(circle, tiles, transformer_to_wgs84, output_path: Path):
+    """
+    Export AOI circle + tiles as a single GeoJSON file in WGS84.
+    - AOI feature: type = 'AOI'
+    - Tile features: type = 'TILE', with tile_id attribute
+    """
+    features = []
+    feature_types = []
+    tile_ids = []
+
+    # AOI (circle)
+    circle_wgs = shapely_transform_geom(circle, transformer_to_wgs84)
+    features.append(circle_wgs)
+    feature_types.append("AOI")
+    tile_ids.append(None)
+
+    # Tiles
+    for tile_id, tile_poly, _, _ in tiles:
+        tile_wgs = shapely_transform_geom(tile_poly, transformer_to_wgs84)
+        features.append(tile_wgs)
+        feature_types.append("TILE")
+        tile_ids.append(tile_id)
+
+    gdf = gpd.GeoDataFrame(
+        {
+            "feature_type": feature_types,
+            "tile_id": tile_ids,
+        },
+        geometry=features,
+        crs="EPSG:4326",
+    )
+
+    gdf.to_file(output_path, driver="GeoJSON")
+
+
+def shapely_transform_geom(geom, transformer_to_wgs84: Transformer):
+    """
+    Apply a pyproj Transformer to a Shapely geometry.
+    (We do this manually to avoid needing shapely.ops.transform if you prefer.)
+    """
+
+    from shapely.ops import transform as shapely_transform
+
+    def _func(x, y, z=None):
+        lon, lat = transformer_to_wgs84.transform(x, y)
+        return lon, lat
+
+    return shapely_transform(_func, geom)
+
+
+# -----------------------------
+# Main entry point
+# -----------------------------
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Tile a circular AOI with 5km x 5km squares and export centerpoints + GeoJSON."
+    )
+    parser.add_argument("--center-lat", type=float, required=True, help="AOI center latitude (WGS84)")
+    parser.add_argument("--center-lon", type=float, required=True, help="AOI center longitude (WGS84)")
+    parser.add_argument("--radius-km", type=float, required=True, help="AOI radius in kilometers")
+    parser.add_argument("--tile-size-km", type=float, default=TILE_SIZE_KM,
+                        help="Tile size (square) in kilometers, default 5 km")
+    parser.add_argument("--out-dir", type=str, default=".",
+                        help="Output directory (default: current directory)")
+
+    args = parser.parse_args()
+
+    center_lat = args.center_lat
+    center_lon = args.center_lon
+    radius_km = args.radius_km
+    tile_size_km = args.tile_size_km
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1) Determine local CRS
+    local_crs = get_local_crs(center_lat, center_lon)
+    print(f"Using local CRS: {local_crs.to_string()}")
+
+    # 2) Transformers
+    transformer_to_local = Transformer.from_crs("EPSG:4326", local_crs, always_xy=True)
+    transformer_to_wgs84 = Transformer.from_crs(local_crs, "EPSG:4326", always_xy=True)
+
+    # 3) Build circle AOI in local CRS
+    circle, (cx, cy), radius_m = build_circle_aoi(center_lat, center_lon, radius_km, transformer_to_local)
+    print(f"AOI center in local CRS: ({cx:.2f}, {cy:.2f}) meters")
+    print(f"AOI radius in local CRS: {radius_m:.2f} meters")
+
+    # 4) Generate tiles that intersect the AOI
+    tiles = generate_tiles_over_circle(circle, tile_size_km)
+    print(f"Generated {len(tiles)} tiles intersecting AOI.")
+
+    if not tiles:
+        print("No tiles intersect AOI. Check inputs.")
+        return
+
+    # 5) Coverage stats
+    aoi_area, coverage_area, coverage_fraction = compute_coverage_stats(circle, tiles)
+    print(f"AOI area: {aoi_area / 1e6:.3f} km^2")
+    print(f"Coverage area (tiles ∩ AOI): {coverage_area / 1e6:.3f} km^2")
+    print(f"Coverage fraction: {coverage_fraction * 100:.2f}%")
+
+    # 6) Export centerpoints CSV
+    centerpoints_path = out_dir / OUTPUT_CENTERPOINTS_CSV
+    export_centerpoints_csv(tiles, transformer_to_wgs84, centerpoints_path)
+    print(f"Wrote tile centerpoints to: {centerpoints_path.resolve()}")
+
+    # 7) Export GeoJSON of AOI + tiles
+    tiles_geojson_path = out_dir / OUTPUT_TILES_GEOJSON
+    export_tiles_geojson(circle, tiles, transformer_to_wgs84, tiles_geojson_path)
+    print(f"Wrote AOI + tiles GeoJSON to: {tiles_geojson_path.resolve()}")
+
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()

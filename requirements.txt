@@ -7,3 +7,6 @@ plotly
 reportlab
 bcrypt
 streamlit-cookies-controller
+shapely
+pyproj
+geopandas

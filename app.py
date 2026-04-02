@@ -27,6 +27,10 @@ init_auth_db()
 init_db()
 seed_all()
 
+# Log data paths on startup (helps debug Render persistent disk issues)
+print(f"[STARTUP] DATA_DIR env = {os.environ.get('DATA_DIR', 'NOT SET (using local data/)')}")
+print(f"[STARTUP] Data dir exists: {os.path.isdir(os.environ.get('DATA_DIR', 'data'))}")
+
 # Auto-backup every 8 hours, clean up backups older than 15 days
 auto_backup_if_due()
 cleanup_old_backups()
@@ -307,13 +311,14 @@ def _login_page():
         "}"
         "@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }"
         ".login-logo { text-align:center; margin-bottom:0.5rem; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both; }"
-        ".login-logo .logo-icon {"
-        "  width:56px; height:56px; border-radius:14px; margin:0 auto 1rem;"
-        "  background:linear-gradient(135deg,rgba(192,168,126,0.18),rgba(192,168,126,0.06));"
-        "  border:1px solid rgba(192,168,126,0.25);"
+        ".login-logo .logo-wrap {"
+        "  width:80px; height:80px; border-radius:20px; margin:0 auto 1.25rem;"
+        "  background:linear-gradient(135deg,rgba(192,168,126,0.12),rgba(192,168,126,0.04));"
+        "  border:1px solid rgba(192,168,126,0.18);"
         "  display:flex; align-items:center; justify-content:center;"
+        "  box-shadow: 0 0 40px rgba(192,168,126,0.08), 0 0 80px rgba(192,168,126,0.04);"
         "}"
-        ".login-logo .logo-icon svg { width:28px; height:28px; fill:#c0a87e; }"
+        ".login-logo .logo-wrap img { width:52px; height:auto; filter:drop-shadow(0 0 12px rgba(181,113,74,0.25)); }"
         ".login-logo h1 { font-family:'Playfair Display',Georgia,serif; font-size:1.5rem; font-weight:600; color:#f1f1f4; margin:0; }"
         ".login-logo p { font-size:0.8rem; color:#8b8fa3; margin-top:0.25rem; }"
         ".login-heading { text-align:center; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both; }"
@@ -333,9 +338,11 @@ def _login_page():
     st.markdown(login_css, unsafe_allow_html=True)
 
     # ── Logo + branding ──
+    logo_b64 = _get_logo_b64()
+    logo_img_tag = f'<img src="data:image/png;base64,{logo_b64}" alt="Stone Harp">' if logo_b64 else ''
     logo_html = (
         '<div class="login-logo">'
-        '<div class="logo-icon">' + LOGO_SVG + '</div>'
+        '<div class="logo-wrap">' + logo_img_tag + '</div>'
         '<h1>Stone Harp Analytics</h1>'
         '<p>Intelligence Reimagined</p>'
         '</div>'
@@ -408,6 +415,7 @@ def _login_page():
 def _landing_page():
     """Tool picker — matches the HTML landing design."""
     _load_css()
+    logo_b64 = _get_logo_b64()
 
     user = st.session_state["auth_user"]
     initial = user["name"][0].upper() if user["name"] else "U"
@@ -461,6 +469,7 @@ def _landing_page():
         border: 1px solid rgba(192,168,126,0.2);
         display: flex; align-items: center; justify-content: center; color: #c0a87e;
     }}
+    .topbar-logo img {{ width: 22px; height: auto; filter: drop-shadow(0 0 6px rgba(181,113,74,0.2)); }}
     .topbar-logo svg {{ width: 18px; height: 18px; fill: #c0a87e; }}
     .topbar-title {{ font-family: 'Playfair Display', Georgia, serif; font-size: 1rem; font-weight: 600; color: #f1f1f4; }}
     .topbar-right {{ display: flex; align-items: center; gap: 1rem; }}
@@ -537,7 +546,7 @@ def _landing_page():
     <header class="topbar">
         <div class="topbar-left">
             <div class="topbar-logo">
-                <svg viewBox="0 0 40 44" xmlns="http://www.w3.org/2000/svg"><path d="M20 0C18 0 16.5 1.5 16.5 3.5V6C12.5 7.5 9 10 7 13.5C4.5 17.5 4 22 5.5 26C7 30 10.5 33 14.5 34.5V38H12V40H28V38H25.5V34.5C29.5 33 33 30 34.5 26C36 22 35.5 17.5 33 13.5C31 10 27.5 7.5 23.5 6V3.5C23.5 1.5 22 0 20 0Z"/></svg>
+                <img src="data:image/png;base64,{logo_b64}" alt="Logo">
             </div>
             <span class="topbar-title">Stone Harp Analytics</span>
         </div>

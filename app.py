@@ -279,197 +279,86 @@ def _login_page():
     """Login — immersive split-screen: branding left, form right."""
     _load_css()
 
-    # ── Hide sidebar + header, set up full-viewport split ──
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"] { display: none !important; }
-    .stApp > header { display: none !important; }
-    [data-testid="stAppViewBlockContainer"] {
-        padding: 0 !important;
-        max-width: 100% !important;
-    }
-    .block-container { padding: 0 !important; max-width: 100% !important; }
+    # ── CSS: centered login card ──
+    login_css = (
+        "<style>"
+        "[data-testid='stSidebar'] { display: none !important; }"
+        ".stApp > header { display: none !important; }"
+        "[data-testid='stAppViewBlockContainer'] {"
+        "  max-width: 420px !important; margin: 0 auto !important;"
+        "  padding: 6vh 0 4vh !important;"
+        "}"
+        ".block-container { max-width: 420px !important; margin: 0 auto !important; padding: 0 !important; }"
+        "[data-testid='stForm'] {"
+        "  background: rgba(255,255,255,0.03) !important;"
+        "  border: 1px solid rgba(255,255,255,0.06) !important;"
+        "  border-radius: 16px !important;"
+        "  padding: 2rem !important;"
+        "  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;"
+        "}"
+        "[data-testid='stFormSubmitButton'] button {"
+        "  background: linear-gradient(135deg, #c0a87e, #a08960) !important;"
+        "  color: #0a0e1a !important; font-weight: 600 !important;"
+        "  border: none !important; border-radius: 8px !important;"
+        "}"
+        "@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }"
+        ".login-logo { text-align:center; margin-bottom:0.5rem; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both; }"
+        ".login-logo .logo-icon {"
+        "  width:56px; height:56px; border-radius:14px; margin:0 auto 1rem;"
+        "  background:linear-gradient(135deg,rgba(192,168,126,0.18),rgba(192,168,126,0.06));"
+        "  border:1px solid rgba(192,168,126,0.25);"
+        "  display:flex; align-items:center; justify-content:center;"
+        "}"
+        ".login-logo .logo-icon svg { width:28px; height:28px; fill:#c0a87e; }"
+        ".login-logo h1 { font-family:'Playfair Display',Georgia,serif; font-size:1.5rem; font-weight:600; color:#f1f1f4; margin:0; }"
+        ".login-logo p { font-size:0.8rem; color:#8b8fa3; margin-top:0.25rem; }"
+        ".login-heading { text-align:center; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both; }"
+        ".login-heading h2 { font-family:'Playfair Display',Georgia,serif; font-size:1.5rem; font-weight:600; color:#f1f1f4; margin:0 0 0.25rem; }"
+        ".login-heading p { font-size:0.85rem; color:#8b8fa3; margin:0 0 1rem; }"
+        ".login-stats {"
+        "  display:flex; justify-content:center; gap:2rem; margin-top:1.5rem; padding-top:1.25rem;"
+        "  border-top:1px solid rgba(255,255,255,0.06);"
+        "  animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.4s both;"
+        "}"
+        ".login-stats .stat { text-align:center; }"
+        ".login-stats .stat-val { font-size:1.1rem; font-weight:700; font-family:'DM Sans',sans-serif; }"
+        ".login-stats .stat-lbl { font-size:0.625rem; color:#8b8fa3; text-transform:uppercase; letter-spacing:0.1em; margin-top:0.15rem; }"
+        ".login-footer { text-align:center; font-size:0.7rem; color:#5a5e72; margin-top:1.5rem; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.5s both; }"
+        "</style>"
+    )
+    st.markdown(login_css, unsafe_allow_html=True)
 
-    @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(24px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes slideInRight {
-        from { opacity: 0; transform: translateX(30px); }
-        to   { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes ringPulse {
-        0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
-        50%      { transform: translate(-50%, -50%) scale(1.08); opacity: 0.7; }
-    }
-    @keyframes glowPulse {
-        0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-        50%      { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
-    }
+    # ── Logo + branding ──
+    logo_html = (
+        '<div class="login-logo">'
+        '<div class="logo-icon">' + LOGO_SVG + '</div>'
+        '<h1>Stone Harp Analytics</h1>'
+        '<p>Intelligence Reimagined</p>'
+        '</div>'
+    )
+    st.markdown(logo_html, unsafe_allow_html=True)
 
-    .login-brand-panel {
-        background: linear-gradient(135deg, #0a0e1a, #0f1520);
-        min-height: 100vh;
-        padding: 2.5rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        position: relative;
-        overflow: hidden;
-    }
-    .login-brand-panel .grid-overlay {
-        position: absolute; inset: 0;
-        background-image:
-            linear-gradient(rgba(192,168,126,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(192,168,126,0.02) 1px, transparent 1px);
-        background-size: 60px 60px;
-        pointer-events: none;
-    }
-    .login-brand-panel .ring {
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        border-radius: 50%;
-        border: 1px solid rgba(192,168,126,0.06);
-        pointer-events: none;
-    }
-    .login-brand-panel .ring-1 { width: 300px; height: 300px; }
-    .login-brand-panel .ring-2 {
-        width: 200px; height: 200px;
-        border-color: rgba(192,168,126,0.1);
-        animation: ringPulse 6s ease-in-out infinite;
-    }
-    .login-brand-panel .glow {
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        width: 350px; height: 350px; border-radius: 50%;
-        background: radial-gradient(circle, rgba(192,168,126,0.08), transparent 70%);
-        filter: blur(60px);
-        pointer-events: none;
-        animation: glowPulse 8s ease-in-out infinite;
-    }
+    # ── Heading ──
+    st.markdown('<div class="login-heading"><h2>Welcome back</h2><p>Sign in to continue</p></div>', unsafe_allow_html=True)
 
-    .brand-top {
-        position: relative; z-index: 1;
-        display: flex; align-items: center; gap: 0.75rem;
-        animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
-    }
-    .brand-top .logo-box {
-        width: 40px; height: 40px; border-radius: 10px;
-        background: linear-gradient(135deg, rgba(192,168,126,0.18), rgba(192,168,126,0.06));
-        border: 1px solid rgba(192,168,126,0.25);
-        display: flex; align-items: center; justify-content: center;
-    }
-    .brand-top .logo-box svg { width: 20px; height: 20px; fill: #c0a87e; }
-    .brand-top span {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-size: 1rem; font-weight: 600; color: #f1f1f4;
-    }
+    # ── Form ──
+    with st.form("login_form", clear_on_submit=False):
+        username = st.text_input("Username", placeholder="Enter your username")
+        password = st.text_input("Password", type="password", placeholder="Enter your password")
+        remember_me = st.checkbox("Remember me for 30 days", value=True)
+        submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
 
-    .brand-hero {
-        position: relative; z-index: 1;
-        text-align: center;
-        animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
-    }
-    .brand-hero h1 {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-size: 2.75rem; font-weight: 600; line-height: 1.15;
-        margin: 0;
-    }
-    .brand-hero h1 .white { color: #f1f1f4; }
-    .brand-hero h1 .gold  { color: #c0a87e; }
-    .brand-hero p {
-        font-size: 0.875rem; color: #8b8fa3; margin-top: 1rem;
-        max-width: 300px; margin-left: auto; margin-right: auto;
-    }
+    # ── Stats row ──
+    stats_html = (
+        '<div class="login-stats">'
+        '<div class="stat"><div class="stat-val" style="color:#4f7cff;">3</div><div class="stat-lbl">Tools</div></div>'
+        '<div class="stat"><div class="stat-val" style="color:#2dd4bf;">24/7</div><div class="stat-lbl">Access</div></div>'
+        '<div class="stat"><div class="stat-val" style="color:#f59e0b;">Secure</div><div class="stat-lbl">Platform</div></div>'
+        '</div>'
+    )
+    st.markdown(stats_html, unsafe_allow_html=True)
 
-    .brand-stats {
-        position: relative; z-index: 1;
-        display: flex; justify-content: center; gap: 2.5rem;
-        animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
-    }
-    .brand-stats .stat { text-align: center; }
-    .brand-stats .stat-value {
-        font-size: 1.5rem; font-weight: 700;
-        font-family: 'DM Sans', sans-serif;
-    }
-    .brand-stats .stat-label {
-        font-size: 0.6875rem; color: #8b8fa3;
-        text-transform: uppercase; letter-spacing: 0.1em;
-        margin-top: 0.25rem;
-    }
-    .brand-stats .stat-divider {
-        width: 1px;
-        background: rgba(255,255,255,0.06);
-        align-self: stretch;
-    }
-
-    .login-form-panel [data-testid="stForm"] {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        max-width: none;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ── Layout: two columns ──
-    col_brand, col_form = st.columns([1.2, 0.8], gap="none")
-
-    with col_brand:
-        st.markdown(f"""
-        <div class="login-brand-panel">
-            <div class="grid-overlay"></div>
-            <div class="ring ring-1"></div>
-            <div class="ring ring-2"></div>
-            <div class="glow"></div>
-
-            <div class="brand-top">
-                <div class="logo-box">{LOGO_SVG}</div>
-                <span>Stone Harp Analytics</span>
-            </div>
-
-            <div class="brand-hero">
-                <h1>
-                    <span class="white">Intelligence</span><br>
-                    <span class="gold">Reimagined</span>
-                </h1>
-                <p>Geospatial analysis, data conversion, and imagery tiling — unified in one platform.</p>
-            </div>
-
-            <div class="brand-stats">
-                <div class="stat">
-                    <div class="stat-value" style="color:#4f7cff;">3</div>
-                    <div class="stat-label">Tools</div>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat">
-                    <div class="stat-value" style="color:#2dd4bf;">24/7</div>
-                    <div class="stat-label">Access</div>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat">
-                    <div class="stat-value" style="color:#f59e0b;">Secure</div>
-                    <div class="stat-label">Platform</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_form:
-        st.markdown("")
-        st.markdown("")
-        st.markdown("")
-        st.markdown("""<h2 style="font-family:'Playfair Display',Georgia,serif;font-size:1.5rem;font-weight:600;color:#f1f1f4;margin-bottom:0.25rem;">Welcome back</h2>""", unsafe_allow_html=True)
-        st.markdown("""<p style="font-size:0.875rem;color:#8b8fa3;margin-bottom:1rem;">Sign in to continue</p>""", unsafe_allow_html=True)
-
-        with st.form("login_form", clear_on_submit=False):
-            username = st.text_input("Username", placeholder="Enter your username")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
-            remember_me = st.checkbox("Remember me for 30 days", value=True)
-            submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
-
-        st.markdown('<div style="text-align:center;font-size:0.75rem;color:#5a5e72;margin-top:1.5rem;"><span style="color:#c0a87e;opacity:0.6;">&#9670;</span>&ensp;Secure access&ensp;<span style="color:#c0a87e;opacity:0.6;">&#9670;</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-footer"><span style="color:#c0a87e;opacity:0.6;">&#9670;</span> Secure access <span style="color:#c0a87e;opacity:0.6;">&#9670;</span></div>', unsafe_allow_html=True)
 
     if submitted:
         if not username or not password:

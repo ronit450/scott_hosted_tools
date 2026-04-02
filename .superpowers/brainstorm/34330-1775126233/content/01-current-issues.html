@@ -1,0 +1,70 @@
+<h2>Current UI/UX Audit</h2>
+<p class="subtitle">Issues found in the Stone Harp Analytics hosted app — click the ones you want to prioritize</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="flash" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Flash / Error Glimpse on Load</h3>
+      <p><strong>Root cause:</strong> The splash screen calls <code>st.set_page_config()</code>, then <code>time.sleep(3)</code>, then <code>st.rerun()</code>. During the rerun, the page config switches (centered → wide or vice versa), and Streamlit briefly shows unstyled content or layout shift before the login page renders. The 2-cycle cookie check in <code>auth_ui.py</code> also causes an extra flash — cycle 1 shows a loading screen, cycle 2 checks cookies, potentially cycle 3 shows login.</p>
+      <p style="color:#f59e0b;">Fix: Eliminate layout config switching, smoother splash→login transition</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="login" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Login Page — Too Simple, Centered Card</h3>
+      <p><strong>Current:</strong> Small centered card with logo + form on dark background. Looks functional but generic.</p>
+      <p><strong>Proposed:</strong> Split-screen layout — left half: branding showcase (logo, tagline, decorative elements), right half: sign-in form. Premium feel, like modern SaaS login pages.</p>
+      <p style="color:#f59e0b;">This is the main visual upgrade you requested</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="transitions" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>No Smooth Page Transitions</h3>
+      <p><strong>Current:</strong> CSS <code>pageIn</code> animation exists (fade + slide up) but gets overridden by Streamlit's rerun behavior. The JS page-loader script tries to intercept clicks but it's fighting Streamlit's framework. Result: pages just "snap" in with a brief white flash.</p>
+      <p><strong>Fix:</strong> Streamlit fundamentally re-executes the script on navigation. True cross-fade is impossible, but we can: dim on exit, fade-in on entry, use the gold shimmer bar consistently, and prevent the content "jump" that looks jarring.</p>
+      <p style="color:#f59e0b;">Improve perceived smoothness within Streamlit's constraints</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="landing" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>Landing Page — 3 Cards Need Rebalancing</h3>
+      <p><strong>Issue:</strong> We just added Daedalus as the 3rd tool. The current 2-card layout was stretched to 3. The columns may feel cramped and the card descriptions are short. The "Sign Out" and "Admin Panel" buttons sit awkwardly below.</p>
+      <p style="color:#f59e0b;">Rebalance the 3-card grid, integrate admin/logout more naturally</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="security" onclick="toggleSelect(this)">
+    <div class="letter">5</div>
+    <div class="content">
+      <h3>Security Review</h3>
+      <p><strong>Good:</strong> bcrypt hashing, rate limiting (5 attempts/5-min lockout), session timeout (30 min), remember-me with hashed tokens, activity logging.</p>
+      <p><strong>Concerns:</strong></p>
+      <ul style="color:#8b8fa3;font-size:0.85rem;margin-top:0.5rem;">
+        <li>Rate limiting is in-memory (<code>_login_attempts</code> dict) — resets on server restart, not persistent</li>
+        <li>Remember-me cookie is not HttpOnly (streamlit-cookies-controller uses JS cookies)</li>
+        <li>No CSRF protection on forms (Streamlit limitation)</li>
+        <li>Session ID not rotated on privilege changes</li>
+        <li><code>tool_access</code> only supports single tool or "both" — no multi-tool combos</li>
+      </ul>
+      <p style="color:#f59e0b;">Most are Streamlit framework limitations, not code bugs</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="sidebar" onclick="toggleSelect(this)">
+    <div class="letter">6</div>
+    <div class="content">
+      <h3>Sidebar Polish</h3>
+      <p>Material icon text leaks are mostly handled by CSS, but the sidebar could use: better active-page highlighting, smoother hover states, and a more polished user info section at the bottom.</p>
+      <p style="color:#f59e0b;">Minor polish, low priority</p>
+    </div>
+  </div>
+
+</div>

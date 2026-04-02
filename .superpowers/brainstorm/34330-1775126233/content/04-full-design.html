@@ -1,0 +1,77 @@
+<h2>Full Design Summary</h2>
+<p class="subtitle">5 changes across the app — review and approve to proceed</p>
+
+<div class="section">
+  <h3>1. Fix Flash on Load</h3>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;margin-top:0.75rem;">
+    <p style="color:#8b8fa3;font-size:0.85rem;line-height:1.7;">
+      <strong style="color:#f1f1f4;">Problem:</strong> Splash uses <code>layout="centered"</code>, then login/landing switch to <code>"wide"</code>. This config switch causes a visible layout jump. The cookie auto-login adds extra rerun cycles.<br><br>
+      <strong style="color:#f1f1f4;">Fix:</strong>
+    </p>
+    <ul style="color:#8b8fa3;font-size:0.85rem;line-height:1.8;padding-left:1.25rem;">
+      <li>Use <code>layout="wide"</code> everywhere — splash, login, landing, tools. No more config switching.</li>
+      <li>The login page will use CSS to center its split-screen layout within the wide canvas (easy since it's all custom HTML anyway).</li>
+      <li>Reduce splash <code>time.sleep(3)</code> to <code>time.sleep(2)</code> — 3s feels too long.</li>
+      <li>Add a CSS class to hide content during rerun transitions (opacity 0 → 1 fade) so the "glimpse" is invisible.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Login Page — Immersive Split (Option B)</h3>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;margin-top:0.75rem;">
+    <ul style="color:#8b8fa3;font-size:0.85rem;line-height:1.8;padding-left:1.25rem;">
+      <li><strong style="color:#f1f1f4;">Left panel (60%):</strong> Immersive branding — logo + "Stone Harp Analytics" top-left, large hero text "Intelligence Reimagined" centered, concentric decorative rings, stat counters (3 Tools / 24/7 / Secure) at bottom, subtle grid overlay</li>
+      <li><strong style="color:#f1f1f4;">Right panel (40%):</strong> "Welcome back" heading, username + password inputs, remember-me checkbox, Sign In button, footer text</li>
+      <li><strong style="color:#f1f1f4;">Implementation:</strong> Full-width HTML/CSS in <code>_login_page()</code> using <code>st.markdown(unsafe_allow_html=True)</code> for the left panel, then Streamlit form widgets for the right panel via <code>st.columns([1.2, 0.8])</code></li>
+      <li>Hide sidebar + header via CSS (already done)</li>
+      <li>Entry animations: fade-up for left content, slide-in for right form</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. Page Transitions</h3>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;margin-top:0.75rem;">
+    <ul style="color:#8b8fa3;font-size:0.85rem;line-height:1.8;padding-left:1.25rem;">
+      <li><strong style="color:#f1f1f4;">Entry animation:</strong> Keep and refine <code>pageIn</code> CSS (fade + slide up + blur). Increase duration slightly (0.5s → 0.6s) for smoother feel.</li>
+      <li><strong style="color:#f1f1f4;">Exit dimming:</strong> The existing CSS <code>.stApp[data-test-script-state="running"]</code> dims to 0.6 opacity — change to 0.85 so it's subtler, less jarring.</li>
+      <li><strong style="color:#f1f1f4;">Gold shimmer bar:</strong> Already exists during reruns. Keep as-is — it's the best transition indicator Streamlit allows.</li>
+      <li><strong style="color:#f1f1f4;">Remove JS page-loader:</strong> The <code>components.html()</code> script in <code>_load_css()</code> fights Streamlit's own mechanism and adds a hidden iframe. Remove it — the CSS-only approach is cleaner and more reliable.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <h3>4. Landing Page — Equal 3-Card Row (Option A)</h3>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;margin-top:0.75rem;">
+    <ul style="color:#8b8fa3;font-size:0.85rem;line-height:1.8;padding-left:1.25rem;">
+      <li>3 equal cards in <code>st.columns([2, 2, 2])</code> with small gutters</li>
+      <li><strong style="color:#f1f1f4;">Topbar integration:</strong> Move Sign Out into the topbar (next to user badge) — eliminate the awkward standalone Sign Out button below cards</li>
+      <li><strong style="color:#f1f1f4;">Admin button:</strong> Move into topbar as a subtle gear icon (admin only), replacing the separate button row</li>
+      <li>Staggered card animations: 0.25s → 0.35s → 0.45s delay</li>
+      <li>Daedalus card: amber accent (#f59e0b), grid icon — already done</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <h3>5. Sidebar Polish</h3>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.25rem;margin-top:0.75rem;">
+    <ul style="color:#8b8fa3;font-size:0.85rem;line-height:1.8;padding-left:1.25rem;">
+      <li><strong style="color:#f1f1f4;">Active page highlight:</strong> Add a left gold border + slightly brighter background on the active nav link</li>
+      <li><strong style="color:#f1f1f4;">Hover states:</strong> Smoother transitions on nav links (0.15s → 0.25s), subtle background shift</li>
+      <li><strong style="color:#f1f1f4;">User info section:</strong> Restyle the bottom sidebar info — add the gold avatar circle, role badge, cleaner layout matching the topbar style</li>
+      <li><strong style="color:#f1f1f4;">Back to Home:</strong> Style as a distinct "← Back" link instead of a regular nav item</li>
+    </ul>
+  </div>
+</div>
+
+<div style="margin-top:2rem;padding:1.25rem;border-radius:12px;border:1px solid rgba(192,168,126,0.2);background:rgba(192,168,126,0.05);">
+  <h3 style="color:#c0a87e;margin-bottom:0.5rem;">Files to Change</h3>
+  <ul style="color:#8b8fa3;font-size:0.85rem;line-height:1.8;padding-left:1.25rem;">
+    <li><code>app.py</code> — Login page rewrite, landing page rebalance, remove JS loader, unify page config</li>
+    <li><code>assets/style.css</code> — Transition refinements, sidebar polish, active link styles</li>
+    <li><code>auth/auth_ui.py</code> — Remove duplicate login form (fallback in require_login), update sidebar_user_info</li>
+  </ul>
+</div>

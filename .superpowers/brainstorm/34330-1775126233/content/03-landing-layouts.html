@@ -1,0 +1,119 @@
+<h2>Landing Page — 3 Tool Cards Layout</h2>
+<p class="subtitle">How should the tool picker look now that there are 3 tools?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:300px;background:#0a0e1a;border-radius:8px;overflow:hidden;font-family:'DM Sans',sans-serif;padding:1.5rem;position:relative;">
+        <!-- Top bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,rgba(192,168,126,0.18),rgba(192,168,126,0.06));border:1px solid rgba(192,168,126,0.2);display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 40 44" style="width:14px;height:14px;fill:#c0a87e;"><path d="M20 0C18 0 16.5 1.5 16.5 3.5V6C12.5 7.5 9 10 7 13.5C4.5 17.5 4 22 5.5 26C7 30 10.5 33 14.5 34.5V38H12V40H28V38H25.5V34.5C29.5 33 33 30 34.5 26C36 22 35.5 17.5 33 13.5C31 10 27.5 7.5 23.5 6V3.5C23.5 1.5 22 0 20 0Z"/></svg>
+            </div>
+            <span style="font-family:'Playfair Display',serif;font-size:0.8rem;color:#f1f1f4;">Stone Harp Analytics</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:100px;padding:0.25rem 0.6rem 0.25rem 0.25rem;">
+            <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#c0a87e,#a08a5c);display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:600;color:#0a0e1a;">S</div>
+            <span style="font-size:0.65rem;color:#f1f1f4;">Scott</span>
+          </div>
+        </div>
+
+        <!-- Hero -->
+        <div style="text-align:center;margin-bottom:1.25rem;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:#f1f1f4;">Welcome back, <span style="color:#c0a87e;">Scott</span></div>
+          <p style="font-size:0.7rem;color:#8b8fa3;margin-top:0.25rem;">Select a tool to continue</p>
+        </div>
+
+        <!-- 3 cards in a row -->
+        <div style="display:flex;gap:0.6rem;">
+          <div style="flex:1;background:rgba(17,24,39,0.55);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:1rem 0.8rem;">
+            <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,rgba(79,124,255,0.15),rgba(79,124,255,0.05));border:1px solid rgba(79,124,255,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:0.6rem;color:#4f7cff;font-size:0.8rem;">&#9632;</div>
+            <div style="font-family:'Playfair Display',serif;font-size:0.85rem;color:#f1f1f4;margin-bottom:0.3rem;">Dashboard Tracker</div>
+            <p style="font-size:0.6rem;color:#8b8fa3;line-height:1.5;margin-bottom:0.6rem;">Contracts, personnel, imagery orders & reports</p>
+            <div style="font-size:0.6rem;color:#4f7cff;">Open Tracker &rarr;</div>
+          </div>
+          <div style="flex:1;background:rgba(17,24,39,0.55);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:1rem 0.8rem;">
+            <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(45,212,191,0.05));border:1px solid rgba(45,212,191,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:0.6rem;color:#2dd4bf;font-size:0.8rem;">&#9673;</div>
+            <div style="font-family:'Playfair Display',serif;font-size:0.85rem;color:#f1f1f4;margin-bottom:0.3rem;">Hermes</div>
+            <p style="font-size:0.6rem;color:#8b8fa3;line-height:1.5;margin-bottom:0.6rem;">Convert CSV/Excel intelligence data to GIS formats</p>
+            <div style="font-size:0.6rem;color:#2dd4bf;">Open Hermes &rarr;</div>
+          </div>
+          <div style="flex:1;background:rgba(17,24,39,0.55);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:1rem 0.8rem;">
+            <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:0.6rem;color:#f59e0b;font-size:0.8rem;">&#9638;</div>
+            <div style="font-family:'Playfair Display',serif;font-size:0.85rem;color:#f1f1f4;margin-bottom:0.3rem;">Daedalus</div>
+            <p style="font-size:0.6rem;color:#8b8fa3;line-height:1.5;margin-bottom:0.6rem;">Generate optimised imagery tile grids from AOI</p>
+            <div style="font-size:0.6rem;color:#f59e0b;">Open Daedalus &rarr;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Horizontal Row (Current Style, Refined)</h3>
+      <p>Keep the 3 cards side by side but tighter, with better proportions. Sign Out + Admin move into the topbar. Clean and balanced. <strong>Recommended</strong> — works well at 3 cards, familiar pattern.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:300px;background:#0a0e1a;border-radius:8px;overflow:hidden;font-family:'DM Sans',sans-serif;padding:1.5rem;position:relative;">
+        <!-- Top bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,rgba(192,168,126,0.18),rgba(192,168,126,0.06));border:1px solid rgba(192,168,126,0.2);display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 40 44" style="width:14px;height:14px;fill:#c0a87e;"><path d="M20 0C18 0 16.5 1.5 16.5 3.5V6C12.5 7.5 9 10 7 13.5C4.5 17.5 4 22 5.5 26C7 30 10.5 33 14.5 34.5V38H12V40H28V38H25.5V34.5C29.5 33 33 30 34.5 26C36 22 35.5 17.5 33 13.5C31 10 27.5 7.5 23.5 6V3.5C23.5 1.5 22 0 20 0Z"/></svg>
+            </div>
+            <span style="font-family:'Playfair Display',serif;font-size:0.8rem;color:#f1f1f4;">Stone Harp Analytics</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span style="font-size:0.6rem;color:#5a5e72;cursor:pointer;">Sign Out</span>
+            <div style="display:flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:100px;padding:0.25rem 0.6rem 0.25rem 0.25rem;">
+              <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#c0a87e,#a08a5c);display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:600;color:#0a0e1a;">S</div>
+              <span style="font-size:0.65rem;color:#f1f1f4;">Scott</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero -->
+        <div style="text-align:center;margin-bottom:1rem;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:#f1f1f4;">Welcome back, <span style="color:#c0a87e;">Scott</span></div>
+          <p style="font-size:0.7rem;color:#8b8fa3;margin-top:0.25rem;">Select a tool to continue</p>
+        </div>
+
+        <!-- Featured card (Tracker) -->
+        <div style="background:rgba(17,24,39,0.55);border:1px solid rgba(79,124,255,0.12);border-radius:14px;padding:0.8rem 1rem;display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem;">
+          <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(79,124,255,0.15),rgba(79,124,255,0.05));border:1px solid rgba(79,124,255,0.2);display:flex;align-items:center;justify-content:center;color:#4f7cff;font-size:0.9rem;flex-shrink:0;">&#9632;</div>
+          <div style="flex:1;">
+            <div style="font-family:'Playfair Display',serif;font-size:0.8rem;color:#f1f1f4;">Dashboard Tracker</div>
+            <p style="font-size:0.55rem;color:#8b8fa3;margin-top:0.15rem;">Contracts, personnel, imagery orders & reports</p>
+          </div>
+          <div style="font-size:0.6rem;color:#4f7cff;">Open &rarr;</div>
+        </div>
+
+        <!-- Two smaller cards -->
+        <div style="display:flex;gap:0.5rem;">
+          <div style="flex:1;background:rgba(17,24,39,0.55);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:0.8rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+              <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,rgba(45,212,191,0.15),rgba(45,212,191,0.05));border:1px solid rgba(45,212,191,0.2);display:flex;align-items:center;justify-content:center;color:#2dd4bf;font-size:0.7rem;">&#9673;</div>
+              <span style="font-family:'Playfair Display',serif;font-size:0.75rem;color:#f1f1f4;">Hermes</span>
+            </div>
+            <p style="font-size:0.55rem;color:#8b8fa3;line-height:1.5;">CSV/Excel to GIS formats</p>
+          </div>
+          <div style="flex:1;background:rgba(17,24,39,0.55);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:0.8rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+              <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;color:#f59e0b;font-size:0.7rem;">&#9638;</div>
+              <span style="font-family:'Playfair Display',serif;font-size:0.75rem;color:#f1f1f4;">Daedalus</span>
+            </div>
+            <p style="font-size:0.55rem;color:#8b8fa3;line-height:1.5;">AOI imagery tiling engine</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Featured + Grid (Tracker Prominent)</h3>
+      <p>Tracker gets a wide featured row since it's the most-used tool. Hermes + Daedalus sit as a 2-up row below. Sign Out moves to topbar. Gives visual hierarchy but may feel unbalanced if all tools are equally important.</p>
+    </div>
+  </div>
+
+</div>

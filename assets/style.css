@@ -342,6 +342,46 @@ section[data-testid="stSidebar"] .stButton > button:hover {
   color: var(--text-primary) !important;
 }
 
+/* ── Sidebar nav link — active page highlight ── */
+section[data-testid="stSidebar"] nav a[aria-current="page"],
+section[data-testid="stSidebar"] nav a[data-active="true"] {
+  background: rgba(192, 168, 126, 0.08) !important;
+  border-left: 3px solid var(--gold-primary) !important;
+  border-radius: 0 10px 10px 0 !important;
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+}
+
+/* ── Sidebar nav link — hover ── */
+section[data-testid="stSidebar"] nav a {
+  transition: all 0.25s ease !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 0 10px 10px 0 !important;
+}
+
+section[data-testid="stSidebar"] nav a:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-left-color: rgba(192, 168, 126, 0.3) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Back to Home link — distinct styling ── */
+section[data-testid="stSidebar"] nav a:first-child {
+  color: var(--text-muted) !important;
+  font-size: 0.8125rem !important;
+  margin-bottom: 0.5rem !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  padding-bottom: 0.75rem !important;
+  border-left: none !important;
+  border-radius: 10px !important;
+}
+
+section[data-testid="stSidebar"] nav a:first-child:hover {
+  color: var(--gold-primary) !important;
+  background: rgba(192, 168, 126, 0.05) !important;
+  border-left: none !important;
+}
+
 /* ── Selectbox, multiselect ── */
 .stSelectbox > div > div,
 .stMultiSelect > div > div {

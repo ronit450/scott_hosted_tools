@@ -259,10 +259,27 @@ def sidebar_user_info():
     user = st.session_state.get("auth_user")
     if not user:
         return
+    initial = user["name"][0].upper() if user.get("name") else "U"
+    role_label = "Admin" if user["role"] == "admin" else "User"
+    role_color = "#ef4444" if user["role"] == "admin" else "#22c55e"
+
     with st.sidebar:
         st.markdown("---")
-        role_badge = "🔴 Admin" if user["role"] == "admin" else "🟢 User"
-        st.markdown(f"**{user['name']}** &nbsp; `{role_badge}`", unsafe_allow_html=True)
-        st.caption(f"@{user['username']}")
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+            <div style="width:32px;height:32px;border-radius:50%;
+                        background:linear-gradient(135deg,#c0a87e,#a08a5c);
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:0.75rem;font-weight:600;color:#0a0e1a;flex-shrink:0;">{initial}</div>
+            <div style="line-height:1.3;overflow:hidden;">
+                <div style="font-size:0.8125rem;font-weight:500;color:#f1f1f4;
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{user['name']}</div>
+                <div style="display:flex;align-items:center;gap:0.375rem;margin-top:0.125rem;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{role_color};display:inline-block;"></span>
+                    <span style="font-size:0.6875rem;color:#8b8fa3;">{role_label}</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         if st.button("Sign Out", key="_sidebar_logout", use_container_width=True):
             logout()

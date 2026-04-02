@@ -721,19 +721,20 @@ def _landing_page():
                 log_activity(user["username"], "daedalus", "open", "Opened Daedalus")
                 st.rerun()
 
-    # Sign out button (in topbar position via CSS trickery)
+    # ── Compact action row ──
     st.markdown("")
-    _, logout_col, _ = st.columns([4, 1.2, 4])
-    with logout_col:
+    if user["role"] == "admin":
+        _, so_col, admin_col, _ = st.columns([5, 0.8, 0.8, 5])
+    else:
+        _, so_col, _ = st.columns([5, 0.8, 5])
+
+    with so_col:
         if st.button("Sign Out", key="landing_logout", use_container_width=True):
             logout()
 
-    # Admin button — only for admins, subtle
     if user["role"] == "admin":
-        _, admin_col, _ = st.columns([3, 1, 3])
         with admin_col:
-            st.markdown("")
-            if st.button("Admin Panel", use_container_width=True, key="btn_admin"):
+            if st.button("Admin", use_container_width=True, key="btn_admin"):
                 st.session_state["active_tool"] = "admin"
                 st.rerun()
 

@@ -54,12 +54,6 @@ def sidebar_quick_stats():
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from db.database import query
 
-    # Sidebar logo
-    logo_path = Path(__file__).parent.parent / "assets" / "logo.jpeg"
-    if logo_path.exists():
-        st.sidebar.image(str(logo_path), use_container_width=True)
-
-    st.sidebar.markdown("---")
     st.sidebar.markdown("### Quick Stats")
 
     stats = _get_sidebar_stats()

@@ -530,14 +530,26 @@ with tab_backups:
 
             # Actions
             with rc[4]:
-                ac1, ac2 = st.columns(2)
+                ac1, ac2, ac3 = st.columns(3)
+                # Download button — zip all db files in this backup
+                import io, zipfile
+                bk_path = bk["path"]
+                zip_buf = io.BytesIO()
+                with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for db_file in bk_path.iterdir():
+                        if db_file.suffix == ".db":
+                            zf.writestr(db_file.name, db_file.read_bytes())
+                zip_buf.seek(0)
+                ac1.download_button("⬇️", data=zip_buf, file_name=f"{bk['name']}.zip",
+                                    mime="application/zip", key=f"bk_dl_{bk['name']}",
+                                    help="Download backup")
                 # Restore button (only if tracker.db exists in backup)
                 if "tracker.db" in bk["files"]:
-                    if ac1.button("↩️", key=f"bk_restore_{bk['name']}", help="Restore tracker from this backup"):
+                    if ac2.button("↩️", key=f"bk_restore_{bk['name']}", help="Restore tracker from this backup"):
                         st.session_state["confirm_restore"] = bk["name"]
                         st.rerun()
                 # Delete button
-                if ac2.button("🗑️", key=f"bk_del_{bk['name']}", help="Delete this backup"):
+                if ac3.button("🗑️", key=f"bk_del_{bk['name']}", help="Delete this backup"):
                     delete_backup(bk["name"])
                     log_activity(user["username"], "admin", "backup_delete", bk["name"])
                     st.toast(f"Deleted backup: {bk['name']}", icon="🗑️")

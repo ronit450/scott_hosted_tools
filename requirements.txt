@@ -10,3 +10,4 @@ streamlit-cookies-controller
 shapely
 pyproj
 geopandas
+python-docx

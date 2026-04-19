@@ -1,7 +1,9 @@
+import io
 import streamlit as st
 import pandas as pd
 import sys
 from pathlib import Path
+from datetime import date, datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from auth.auth_ui import require_login
@@ -22,7 +24,184 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-tab_roles, tab_db = st.tabs(["Job Roles & Rates", "Database & Projects"])
+
+# ─── Report generation helpers ────────────────────────────────────────────────
+
+def _fmt_price(v):
+    """Format a price value: no decimals when whole number, else 2dp."""
+    if v == int(v):
+        return f"${int(v):,}"
+    return f"${v:,.2f}"
+
+
+def _set_cell_text(cell, text):
+    """Replace all runs in a table cell's first paragraph with a single text run."""
+    from docx.oxml.ns import qn
+    para = cell.paragraphs[0]
+    p = para._p
+    for r_elem in p.findall(qn("w:r")):
+        p.remove(r_elem)
+    if text:
+        para.add_run(str(text))
+
+
+def _generate_docx(header_data, labor_row, img_rows):
+    """Fill the Options Invoice template and return DOCX bytes."""
+    from docx import Document
+    template_path = Path(__file__).parent.parent / "assets" / "Options_Invoice_Template.docx"
+    doc = Document(str(template_path))
+
+    # Table 0 — header fields
+    t0 = doc.tables[0]
+    _set_cell_text(t0.rows[1].cells[1], header_data["contract_event"])
+    _set_cell_text(t0.rows[2].cells[1], header_data["submission_date"])
+
+    # Table 1 — options breakdown
+    t1 = doc.tables[1]
+    all_rows = [labor_row] + img_rows + [{"name": "Nothing Follows", "qty": "", "price": "", "desc": ""}]
+
+    for i, rd in enumerate(all_rows):
+        row_idx = i + 1  # row 0 is the header
+        if row_idx >= len(t1.rows):
+            # Copy last data row XML to add a new row
+            from copy import deepcopy
+            last_tr = t1.rows[-1]._tr
+            new_tr = deepcopy(last_tr)
+            t1._tbl.append(new_tr)
+
+        tr = t1.rows[row_idx]
+        _set_cell_text(tr.cells[0], rd["name"])
+        _set_cell_text(tr.cells[1], str(rd["qty"]) if rd["qty"] != "" else "")
+        _set_cell_text(tr.cells[2], _fmt_price(rd["price"]) if rd["price"] != "" else "")
+        _set_cell_text(tr.cells[3], rd.get("desc", ""))
+
+    # Clear leftover empty rows
+    clear_from = len(all_rows) + 1
+    for i in range(clear_from, len(t1.rows)):
+        tr = t1.rows[i]
+        for cell in tr.cells:
+            _set_cell_text(cell, "")
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def _generate_pdf(header_data, labor_row, img_rows):
+    """Generate a clean PDF version of the invoice using reportlab."""
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+
+    buf = io.BytesIO()
+    # Use letter size with generous margins so content fits
+    page_w, page_h = letter
+    margin = 0.6 * inch
+    usable_w = page_w - 2 * margin
+
+    doc = SimpleDocTemplate(
+        buf, pagesize=letter,
+        topMargin=margin, bottomMargin=margin,
+        leftMargin=margin, rightMargin=margin,
+    )
+    styles = getSampleStyleSheet()
+    navy = colors.HexColor("#1f4e79")
+    light_grey = colors.HexColor("#f2f2f2")
+    border_grey = colors.HexColor("#bbbbbb")
+
+    cell_style = ParagraphStyle("Cell", parent=styles["Normal"], fontSize=8, leading=11, wordWrap="LTR")
+    cell_bold = ParagraphStyle("CellBold", parent=cell_style, fontName="Helvetica-Bold")
+    cell_white = ParagraphStyle("CellWhite", parent=cell_style, fontName="Helvetica-Bold", textColor=colors.white)
+
+    title_style = ParagraphStyle("T", parent=styles["Title"], fontSize=15, spaceAfter=2, textColor=navy)
+    sub_style = ParagraphStyle("S", parent=styles["Normal"], fontSize=8, spaceAfter=10, textColor=colors.grey)
+    h2_style = ParagraphStyle("H2", parent=styles["Heading2"], fontSize=11, spaceBefore=12, spaceAfter=6, textColor=navy)
+
+    story = [
+        Paragraph("Options Invoice Sheet", title_style),
+        Paragraph("(Please complete NLT 24 hrs after AAR submission and please convert to PDF)", sub_style),
+    ]
+
+    # Header info table — two equal columns
+    col_w = usable_w / 2
+    t0_data = [
+        [Paragraph("Vendor Name:", cell_bold), Paragraph("Stone Harp Analytics", cell_style)],
+        [Paragraph("Contract Number \u2013 Event Name:", cell_bold), Paragraph(header_data["contract_event"], cell_style)],
+        [Paragraph("Option Submission Date:", cell_bold), Paragraph(header_data["submission_date"], cell_style)],
+        [Paragraph("Does the following options reflect the original options?", cell_bold), Paragraph("Y", cell_style)],
+        [Paragraph("If not, please explain:", cell_bold), Paragraph("No Modification Required", cell_style)],
+        [Paragraph("Space Component:", cell_bold), Paragraph("To be Filled by Customer", cell_style)],
+    ]
+    t0 = Table(t0_data, colWidths=[col_w, col_w])
+    t0.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, border_grey),
+        ("BACKGROUND", (0, 0), (0, -1), light_grey),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(t0)
+    story.append(Paragraph("Options Breakdown Assessment", h2_style))
+
+    # Options table — fixed column widths that sum to usable_w
+    # Name | Qty | Cost | Description
+    c0 = 1.7 * inch
+    c1 = 0.65 * inch
+    c2 = 1.1 * inch
+    c3 = usable_w - c0 - c1 - c2
+
+    hdr_cells = [
+        Paragraph("Name", cell_white),
+        Paragraph("Quantity", cell_white),
+        Paragraph("Cost per unit ($)", cell_white),
+        Paragraph("Description / Breakdown", cell_white),
+    ]
+    t1_data = [hdr_cells]
+    t1_data.append([
+        Paragraph(labor_row["name"], cell_bold),
+        Paragraph(str(labor_row["qty"]), cell_style),
+        Paragraph(_fmt_price(labor_row["price"]), cell_style),
+        Paragraph(labor_row.get("desc", ""), cell_style),
+    ])
+    for r in img_rows:
+        t1_data.append([
+            Paragraph(r["name"], cell_style),
+            Paragraph(str(r["qty"]), cell_style),
+            Paragraph(_fmt_price(r["price"]), cell_style),
+            Paragraph(r.get("desc", ""), cell_style),
+        ])
+    t1_data.append([
+        Paragraph("Nothing Follows", ParagraphStyle("NF", parent=cell_style, textColor=colors.grey, fontName="Helvetica-Oblique")),
+        Paragraph("", cell_style), Paragraph("", cell_style), Paragraph("", cell_style),
+    ])
+
+    row_count = len(t1_data)
+    t1 = Table(t1_data, colWidths=[c0, c1, c2, c3], repeatRows=1)
+    t1.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, border_grey),
+        ("BACKGROUND", (0, 0), (-1, 0), navy),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("ROWBACKGROUNDS", (0, 1), (-1, row_count - 2), [colors.white, colors.HexColor("#f0f4f8")]),
+    ]))
+    story.append(t1)
+
+    doc.build(story)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+# ─── Page tabs ────────────────────────────────────────────────────────────────
+
+tab_roles, tab_db, tab_report = st.tabs(["Job Roles & Rates", "Database & Projects", "Report Generation"])
 
 # ========================
 # JOB ROLES TAB
@@ -292,3 +471,222 @@ with tab_db:
                 if dc2.button("Cancel", key="settings_cancel_del_btn"):
                     st.session_state.pop("settings_confirm_del", None)
                     st.rerun()
+
+# ========================
+# REPORT GENERATION TAB
+# ========================
+with tab_report:
+    st.subheader("Generate Options Invoice")
+    st.caption("Fills the standard Options Invoice template with live data from the tracker.")
+
+    all_rpt_projects = query(
+        "SELECT id, pws_number, report_title, days, is_daily_rate FROM projects ORDER BY pws_number, report_title"
+    )
+
+    if not all_rpt_projects:
+        st.info("No projects yet. Create projects on the Projects page first.")
+        st.stop()
+
+    all_pws_rpt = sorted(set(p["pws_number"] for p in all_rpt_projects))
+
+    # ── Invoice details ──────────────────────────────────────────────────────
+    st.markdown("#### Invoice Details")
+    d1, d2 = st.columns(2)
+    with d1:
+        sel_pws_rpt = st.selectbox("PWS Number", all_pws_rpt, key="rpt_pws")
+        pws_projects = [p for p in all_rpt_projects if p["pws_number"] == sel_pws_rpt]
+        proj_labels = [p["report_title"] for p in pws_projects]
+        sel_proj_title = st.selectbox("Project", proj_labels, key="rpt_project")
+        sel_proj = next(p for p in pws_projects if p["report_title"] == sel_proj_title)
+        contract_event = st.text_input(
+            "Contract Number \u2013 Event Name",
+            value=f"PWS {sel_proj['pws_number']}",
+            placeholder="e.g. 11080 - etbf / PWS 11080 / LANDAC / SPAC",
+            key="rpt_contract",
+        )
+    with d2:
+        sub_date = st.date_input("Option Submission Date", value=date.today(), key="rpt_date")
+        sub_date_str = sub_date.strftime("%-d %B %Y")
+
+    # ── Daily labour rate ────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Daily Labour Rate")
+
+    # Auto-calculate chargeable days from this project's days field
+    auto_days = int(sel_proj["days"] or 0)
+    chargeable_days = st.number_input(
+        "Chargeable Days",
+        value=auto_days,
+        min_value=0,
+        step=1,
+        key="rpt_chargeable_days",
+        help=f"Auto-filled from project days field ({auto_days}). Edit freely.",
+    )
+
+    REPORT_PW = "scott"
+    unlocked = st.session_state.get("_rpt_unlocked", False)
+
+    if not unlocked:
+        pw_col, btn_col = st.columns([3, 1])
+        with pw_col:
+            entered_pw = st.text_input(
+                "Password to view/edit daily rate", type="password", key="rpt_pw_input",
+                placeholder="Enter password to unlock rate field",
+            )
+        with btn_col:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            if st.button("Unlock", key="rpt_unlock_btn"):
+                if entered_pw == REPORT_PW:
+                    st.session_state["_rpt_unlocked"] = True
+                    st.rerun()
+                else:
+                    st.error("Incorrect password")
+        daily_rate_per_day = 3000
+    else:
+        rate_col, lock_col = st.columns([3, 1])
+        with rate_col:
+            daily_rate_per_day = st.number_input(
+                "Daily Rate ($ per day)", value=3000, step=100, min_value=0, key="rpt_daily_rate",
+            )
+        with lock_col:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            if st.button("Lock", key="rpt_lock_btn"):
+                st.session_state.pop("_rpt_unlocked", None)
+                st.rerun()
+
+    labor_total = chargeable_days * daily_rate_per_day
+    st.markdown(
+        f"**Labour Total: ${labor_total:,}** "
+        f"({chargeable_days} days \u00d7 ${daily_rate_per_day:,})"
+    )
+
+    # ── Imagery rows ─────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Imagery Rows")
+    st.caption(
+        "Auto-loaded from imagery orders with delivered shots > 0 for this project. "
+        "Edit, remove, or add rows before generating."
+    )
+
+    lh1, lh2, lh3, lh4 = st.columns([3, 1, 1.5, 0.5])
+    lh1.markdown("**Product / Name**")
+    lh2.markdown("**Qty (delivered)**")
+    lh3.markdown("**Price per unit ($)**")
+    lh4.markdown("")
+
+    db_imagery = query(
+        """SELECT provider, product, shots_delivered, charge_per_shot
+           FROM imagery_orders
+           WHERE project_id = ? AND shots_delivered > 0
+           ORDER BY provider, product""",
+        (sel_proj["id"],),
+    )
+
+    # Reset imagery rows when project changes
+    if st.session_state.get("_rpt_imagery_proj") != sel_proj["id"]:
+        st.session_state["_rpt_imagery_proj"] = sel_proj["id"]
+        st.session_state["_rpt_imagery_rows"] = [
+            {
+                "name": f"{r['provider']} {r['product']}",
+                "qty": int(r["shots_delivered"]),
+                "price": float(r["charge_per_shot"]),
+            }
+            for r in db_imagery
+        ]
+
+    rows = st.session_state["_rpt_imagery_rows"]
+    to_delete = []
+
+    for i, row in enumerate(rows):
+        rc1, rc2, rc3, rc4 = st.columns([3, 1, 1.5, 0.5])
+        with rc1:
+            rows[i]["name"] = st.text_input(
+                "name", value=row["name"], key=f"rpt_img_name_{i}",
+                label_visibility="collapsed", placeholder="Product name",
+            )
+        with rc2:
+            rows[i]["qty"] = st.number_input(
+                "qty", value=row["qty"], min_value=0, step=1,
+                key=f"rpt_img_qty_{i}", label_visibility="collapsed",
+            )
+        with rc3:
+            rows[i]["price"] = st.number_input(
+                "price", value=row["price"], min_value=0.0, step=10.0,
+                key=f"rpt_img_price_{i}", label_visibility="collapsed",
+            )
+        with rc4:
+            if st.button("\u2715", key=f"rpt_img_del_{i}", help="Remove this row"):
+                to_delete.append(i)
+
+    for i in reversed(to_delete):
+        rows.pop(i)
+    if to_delete:
+        st.rerun()
+
+    if st.button("+ Add Imagery Row", key="rpt_add_row"):
+        rows.append({"name": "", "qty": 0, "price": 0.0})
+        st.rerun()
+
+    img_total = sum(r["qty"] * r["price"] for r in rows)
+    st.markdown(f"**Imagery Total: ${img_total:,.2f}**")
+
+    # ── Output format & generate ─────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Generate Report")
+    out_format = st.radio(
+        "Output Format",
+        ["Word (.docx)", "PDF (.pdf)", "Both"],
+        horizontal=True,
+        key="rpt_format",
+    )
+
+    if st.button("Generate Report", type="primary", key="rpt_generate"):
+        labor_row_data = {
+            "name": "Stone Harp Daily Labor Rate",
+            "qty": chargeable_days,
+            "price": daily_rate_per_day,
+            "desc": f"Quantity * price = ${chargeable_days * daily_rate_per_day:,}",
+        }
+        img_rows_data = [
+            {
+                "name": r["name"],
+                "qty": r["qty"],
+                "price": r["price"],
+                "desc": f"Quantity * price = ${r['qty'] * r['price']:,.2f}",
+            }
+            for r in rows
+            if r["name"].strip()
+        ]
+        hdr = {
+            "contract_event": contract_event,
+            "submission_date": sub_date_str,
+        }
+        safe_title = sel_proj["report_title"].replace(" ", "_")[:30]
+        filename_base = f"Options_Invoice_{safe_title}_{sub_date.strftime('%Y%m%d')}"
+
+        dl_col1, dl_col2 = st.columns(2)
+        if out_format in ("Word (.docx)", "Both"):
+            try:
+                docx_bytes = _generate_docx(hdr, labor_row_data, img_rows_data)
+                dl_col1.download_button(
+                    "Download Word (.docx)",
+                    data=docx_bytes,
+                    file_name=f"{filename_base}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.error(f"DOCX generation failed: {e}")
+
+        if out_format in ("PDF (.pdf)", "Both"):
+            try:
+                pdf_bytes = _generate_pdf(hdr, labor_row_data, img_rows_data)
+                dl_col2.download_button(
+                    "Download PDF (.pdf)",
+                    data=pdf_bytes,
+                    file_name=f"{filename_base}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+            except Exception as e:
+                st.error(f"PDF generation failed: {e}")
